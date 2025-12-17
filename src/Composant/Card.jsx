@@ -12,7 +12,8 @@ import {
   ArrowRight, Filter,
   Grid, List, Plus, Minus,
   Search, Menu, Eye, TrendingUp,
-  Headphones, Zap, RefreshCw, Lock
+  Headphones, Zap, RefreshCw, Lock,
+  Flame, Tag, Percent, Calendar
 } from "lucide-react";
 
 // Import des images (à remplacer par vos images réelles)
@@ -46,9 +47,18 @@ const FootballJerseysShop = () => {
   const [searchText, setSearchText] = useState("");
   const [showCartPanel, setShowCartPanel] = useState(false);
 
-  // Taux de conversion
-  const EUR_TO_MAD = 11;
+  // Prix et promotion
   const DELIVERY_FEE = 29; // MAD
+  const PROMOTION_END_DATE = new Date("2025-12-22");
+  const currentDate = new Date();
+  const isPromotionActive = currentDate <= PROMOTION_END_DATE;
+  const NORMAL_PRICE = 180;
+  const PROMOTION_PRICE = 150;
+  
+  // Obtenir le prix actuel
+  const getProductPrice = () => {
+    return isPromotionActive ? PROMOTION_PRICE : NORMAL_PRICE;
+  };
 
   // Villes du Maroc
   const citiesMorocco = [
@@ -68,7 +78,6 @@ const FootballJerseysShop = () => {
       highlightColor: "#FF6B00",
       flag: "🇨🇮",
       image: jersey1,
-      priceEUR: 349.00,
       shortDesc: "Maillot officiel domicile des Éléphants de Côte d'Ivoire.",
       highlights: [
         "Technologie Dri-FIT ADVANCE™",
@@ -90,7 +99,6 @@ const FootballJerseysShop = () => {
       highlightColor: "#14532D",
       flag: "🇲🇱",
       image: jersey2,
-      priceEUR: 329.00,
       shortDesc: "Maillot domicile officiel des Aigles du Mali.",
       highlights: [
         "Tissu Climacool®",
@@ -112,7 +120,6 @@ const FootballJerseysShop = () => {
       highlightColor: "#FFFFFF",
       flag: "🇲🇱",
       image: jersey3,
-      priceEUR: 329.00,
       shortDesc: "Maillot extérieur officiel des Aigles du Mali.",
       highlights: [
         "Tissu micro-mesh",
@@ -134,7 +141,6 @@ const FootballJerseysShop = () => {
       highlightColor: "#14532D",
       flag: "🇸🇳",
       image: jersey4,
-      priceEUR: 349.00,
       shortDesc: "Maillot officiel domicile des Lions de la Teranga.",
       highlights: [
         "Technologie AeroSwift",
@@ -156,7 +162,6 @@ const FootballJerseysShop = () => {
       highlightColor: "#FFFFFF",
       flag: "🇸🇳",
       image: jersey5,
-      priceEUR: 369.00,
       shortDesc: "Maillot extérieur officiel des Lions de la Teranga.",
       highlights: [
         "Tissu carbon pro",
@@ -172,31 +177,41 @@ const FootballJerseysShop = () => {
     }
   ];
 
-  // Convertir EUR en MAD
-  const convertToMAD = (euros) => {
-    return (euros * EUR_TO_MAD).toFixed(2);
-  };
+  // Ajouter le prix aux produits
+  const productsWithPrice = products.map(product => ({
+    ...product,
+    priceMAD: getProductPrice()
+  }));
 
   // Formater le prix
-  const formatPrice = (priceEUR) => {
-    const mad = convertToMAD(priceEUR);
-    return {
-      euro: `${priceEUR}€`,
-      mad: `${mad} MAD`
-    };
+  const formatPrice = (priceMAD) => {
+    return `${priceMAD} DH`;
   };
 
   // Calculer le total
   const calculateTotal = () => {
-    if (!selectedProduct) return { euro: "0.00€", mad: "0.00 MAD" };
-    const subtotalEUR = selectedProduct.priceEUR * quantity;
-    const totalMAD = (parseFloat(convertToMAD(subtotalEUR)) + DELIVERY_FEE).toFixed(2);
+    if (!selectedProduct) return { subtotal: 0, delivery: DELIVERY_FEE, total: DELIVERY_FEE };
+    
+    const subtotal = selectedProduct.priceMAD * quantity;
+    const total = subtotal + DELIVERY_FEE;
+    
     return {
-      euro: `${subtotalEUR.toFixed(2)}€`,
-      mad: `${totalMAD} MAD`,
-      subtotal: convertToMAD(subtotalEUR),
-      delivery: DELIVERY_FEE
+      subtotal: subtotal,
+      delivery: DELIVERY_FEE,
+      total: total,
+      formatted: {
+        subtotal: `${subtotal} DH`,
+        delivery: `${DELIVERY_FEE} DH`,
+        total: `${total} DH`
+      }
     };
+  };
+
+  // Calculer les jours restants pour la promotion
+  const getDaysRemaining = () => {
+    const diffTime = PROMOTION_END_DATE - currentDate;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? diffDays : 0;
   };
 
   // Gérer la sélection d'un produit
@@ -266,7 +281,7 @@ const FootballJerseysShop = () => {
   };
 
   // Filtrer les produits
-  const filteredProducts = products.filter(product => {
+  const filteredProducts = productsWithPrice.filter(product => {
     if (activeCategory === "all") return true;
     if (activeCategory === "coteivoire") return product.country === "Côte d'Ivoire";
     if (activeCategory === "mali") return product.country === "Mali";
@@ -284,6 +299,9 @@ const FootballJerseysShop = () => {
       --color-primary-light: #1a1a1a;
       --color-accent: #F59E0B;
       --color-accent-dark: #D97706;
+      --color-promotion: #EF4444;
+      --color-promotion-light: #FEE2E2;
+      --color-promotion-dark: #DC2626;
       --color-white: #ffffff;
       --color-gray-50: #f9fafb;
       --color-gray-100: #f3f4f6;
@@ -305,6 +323,7 @@ const FootballJerseysShop = () => {
       --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
       --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
       --shadow-gold: 0 0 20px rgba(245, 158, 11, 0.3);
+      --shadow-promo: 0 0 20px rgba(239, 68, 68, 0.3);
       --radius-sm: 4px;
       --radius: 8px;
       --radius-md: 12px;
@@ -479,14 +498,116 @@ const FootballJerseysShop = () => {
       }
     }
 
+    /* Bannière promotion */
+    .promotion-banner {
+      background: linear-gradient(135deg, var(--color-promotion), var(--color-promotion-dark));
+      color: var(--color-white);
+      border-radius: var(--radius-xl);
+      padding: 1.5rem;
+      margin: 1rem 1rem 2rem 1rem;
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+      border: 2px solid var(--color-promotion);
+      animation: slideInDown 0.5s ease;
+    }
+
+    @keyframes slideInDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .promotion-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      position: relative;
+      z-index: 2;
+    }
+
+    .promotion-title {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 1.25rem;
+      font-weight: 800;
+    }
+
+    .promotion-text {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .promotion-countdown {
+      background: rgba(255, 255, 255, 0.15);
+      padding: 0.75rem 1.5rem;
+      border-radius: var(--radius-lg);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .countdown-timer {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 700;
+      font-size: 1.125rem;
+    }
+
+    .promotion-badge {
+      position: absolute;
+      top: -10px;
+      right: 20px;
+      background: var(--color-white);
+      color: var(--color-promotion);
+      padding: 0.5rem 1rem;
+      font-size: 0.75rem;
+      font-weight: 800;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      z-index: 3;
+      transform: rotate(5deg);
+      animation: pulse 2s infinite;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: rotate(5deg) scale(1); }
+      50% { transform: rotate(5deg) scale(1.05); }
+    }
+
+    .price-highlight {
+      background: linear-gradient(135deg, var(--color-accent), var(--color-accent-dark));
+      color: var(--color-white);
+      padding: 0.75rem 1.5rem;
+      border-radius: var(--radius-lg);
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 1rem;
+      box-shadow: var(--shadow);
+      border: 2px solid var(--color-accent-dark);
+    }
+
     /* Bannière hero */
     .hero-banner {
-      width: 100%;
+      width: calc(100% - 2rem);
       background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
       color: var(--color-white);
       border-radius: var(--radius-2xl);
       padding: 3rem 2rem;
-      margin: 2rem 0;
+      margin: 0 1rem 2rem 1rem;
       position: relative;
       overflow: hidden;
     }
@@ -655,6 +776,16 @@ const FootballJerseysShop = () => {
       font-weight: 700;
       border-radius: var(--radius);
       z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .product-badge.promo-badge {
+      background: var(--color-promotion);
+      left: auto;
+      right: 1rem;
+      animation: pulse 2s infinite;
     }
 
     .favorite-toggle {
@@ -737,18 +868,37 @@ const FootballJerseysShop = () => {
       align-items: baseline;
       gap: 0.75rem;
       margin-bottom: 1rem;
-    }
-
-    .price-euro {
-      font-size: 1rem;
-      color: var(--color-gray-500);
-      text-decoration: line-through;
+      flex-direction: column;
+      align-items: flex-start;
     }
 
     .price-mad {
       font-size: 1.5rem;
       font-weight: 800;
       color: var(--color-gray-900);
+    }
+
+    .promotion-price {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 0.25rem;
+    }
+
+    .old-price {
+      text-decoration: line-through;
+      color: var(--color-gray-500);
+      font-size: 0.875rem;
+    }
+
+    .savings-badge {
+      background: var(--color-promotion-light);
+      color: var(--color-promotion);
+      padding: 0.25rem 0.5rem;
+      border-radius: var(--radius);
+      font-size: 0.75rem;
+      font-weight: 700;
+      border: 1px solid var(--color-promotion);
     }
 
     .features-list {
@@ -796,6 +946,17 @@ const FootballJerseysShop = () => {
     .primary-action:hover {
       background: var(--color-primary-light);
       transform: translateY(-2px);
+    }
+
+    .primary-action.promo-action {
+      background: linear-gradient(135deg, var(--color-promotion), var(--color-promotion-dark));
+      box-shadow: var(--shadow-promo);
+    }
+
+    .primary-action.promo-action:hover {
+      background: linear-gradient(135deg, var(--color-promotion-dark), var(--color-promotion));
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);
     }
 
     .secondary-action {
@@ -901,6 +1062,15 @@ const FootballJerseysShop = () => {
       font-size: 2.5rem;
       font-weight: 800;
       color: var(--color-accent);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .price-after-promotion {
+      font-size: 1.5rem;
+      color: var(--color-gray-500);
+      text-decoration: line-through;
     }
 
     .product-modal-rating {
@@ -1078,6 +1248,16 @@ const FootballJerseysShop = () => {
       box-shadow: var(--shadow-gold);
     }
 
+    .modal-checkout-button.promo-button {
+      background: linear-gradient(135deg, var(--color-promotion), var(--color-promotion-dark));
+      box-shadow: var(--shadow-promo);
+    }
+
+    .modal-checkout-button.promo-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);
+    }
+
     .modal-checkout-button:disabled {
       opacity: 0.5;
       cursor: not-allowed;
@@ -1247,9 +1427,17 @@ const FootballJerseysShop = () => {
       gap: 1rem;
     }
 
+    .submit-order.promo-submit {
+      background: linear-gradient(135deg, var(--color-promotion), var(--color-promotion-dark));
+    }
+
     .submit-order:hover:not(:disabled) {
       transform: translateY(-2px);
       box-shadow: 0 10px 20px rgba(16, 185, 129, 0.2);
+    }
+
+    .submit-order.promo-submit:hover:not(:disabled) {
+      box-shadow: 0 10px 20px rgba(239, 68, 68, 0.2);
     }
 
     .submit-order:disabled {
@@ -1355,83 +1543,6 @@ const FootballJerseysShop = () => {
       line-height: 1.6;
     }
 
-    /* Footer */
-    .main-footer {
-      background: var(--color-gray-900);
-      color: var(--color-white);
-      padding: 4rem 0 2rem;
-      margin-top: 4rem;
-      width: 100%;
-    }
-
-    .footer-wrapper {
-      max-width: 100%;
-      margin: 0 auto;
-      padding: 0 1rem;
-    }
-
-    .footer-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 3rem;
-      margin-bottom: 3rem;
-    }
-
-    .footer-column h3 {
-      font-size: 1.25rem;
-      font-weight: 700;
-      margin-bottom: 1.5rem;
-    }
-
-    .footer-links {
-      list-style: none;
-    }
-
-    .footer-links li {
-      margin-bottom: 0.75rem;
-    }
-
-    .footer-links a {
-      color: var(--color-gray-400);
-      text-decoration: none;
-      transition: var(--transition);
-    }
-
-    .footer-links a:hover {
-      color: var(--color-white);
-    }
-
-    .social-icons {
-      display: flex;
-      gap: 1rem;
-      margin-top: 1.5rem;
-    }
-
-    .social-icon {
-      width: 40px;
-      height: 40px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--color-white);
-      transition: var(--transition);
-    }
-
-    .social-icon:hover {
-      background: var(--color-accent);
-      transform: translateY(-3px);
-    }
-
-    .footer-bottom {
-      text-align: center;
-      padding-top: 2rem;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-      color: var(--color-gray-400);
-      font-size: 0.875rem;
-    }
-
     /* Menu mobile */
     .mobile-menu-overlay {
       position: fixed;
@@ -1471,10 +1582,31 @@ const FootballJerseysShop = () => {
       font-weight: 600;
     }
 
+    .mobile-nav-link.promo-link {
+      background: var(--color-promotion-light);
+      color: var(--color-promotion);
+      border: 2px solid var(--color-promotion);
+    }
+
     /* Responsive */
     @media (max-width: 768px) {
       .hero-banner {
         padding: 2rem 1rem;
+        margin: 0 1rem 1rem 1rem;
+      }
+      
+      .promotion-banner {
+        margin: 1rem 1rem 1rem 1rem;
+        padding: 1rem;
+      }
+      
+      .promotion-content {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      
+      .promotion-countdown {
+        width: 100%;
       }
       
       .stats-grid {
@@ -1487,6 +1619,14 @@ const FootballJerseysShop = () => {
       }
       
       .modal-body {
+        padding: 1rem;
+      }
+      
+      .product-modal-body {
+        padding: 1rem;
+      }
+      
+      .product-modal-header {
         padding: 1rem;
       }
       
@@ -1516,6 +1656,16 @@ const FootballJerseysShop = () => {
 
     ::-webkit-scrollbar-thumb:hover {
       background: var(--color-gray-500);
+    }
+
+    /* Animations supplémentaires */
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .floating {
+      animation: float 3s ease-in-out infinite;
     }
   `;
 
@@ -1580,17 +1730,58 @@ const FootballJerseysShop = () => {
           </div>
         </header>
 
+        {/* Bannière promotion */}
+        {isPromotionActive && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="promotion-banner"
+          >
+            <div className="promotion-badge">
+              <Flame size={12} /> PROMO
+            </div>
+            <div className="promotion-content">
+              <div className="promotion-text">
+                <h3 className="promotion-title">
+                  <Percent size={24} />
+                  PROMOTION SPÉCIALE
+                </h3>
+                <p style={{ marginTop: '0.5rem', opacity: 0.9 }}>
+                  <strong>150 DH</strong> au lieu de <span className="old-price" style={{ color: 'rgba(255,255,255,0.8)' }}>180 DH</span> par maillot
+                  <br />
+                  Offre valable jusqu'au 22 décembre 2025
+                </p>
+              </div>
+              <div className="promotion-countdown">
+                <div className="countdown-timer">
+                  <Calendar size={20} />
+                  <span>Il reste {getDaysRemaining()} jours</span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Bannière Hero */}
         <div className="hero-banner">
           <div className="hero-content">
             <h1 className="hero-title">
               Maillots Officiels Africains
               <br />
-              <span style={{ color: 'var(--color-accent)' }}>Livraison au Maroc</span>
+              <span style={{ color: 'var(--color-accent)' }}>
+                {isPromotionActive ? 'À partir de 150 DH' : 'À partir de 180 DH'}
+              </span>
             </h1>
             <p className="hero-description">
               Commandez votre maillot préféré des équipes nationales.
               Livraison express dans toutes les villes du Maroc.
+              {isPromotionActive && (
+                <div className="price-highlight">
+                  <Tag size={16} />
+                  PROMOTION EN COURS : 150 DH le maillot
+                </div>
+              )}
             </p>
             
             <div className="stats-grid">
@@ -1627,7 +1818,7 @@ const FootballJerseysShop = () => {
           <div className="section-header">
             <div className="section-tag">
               <Award size={20} />
-              COLLECTION 2024
+              {isPromotionActive ? 'PROMOTION 2024' : 'COLLECTION 2024'}
             </div>
             
             <h2 className="section-heading">
@@ -1635,7 +1826,10 @@ const FootballJerseysShop = () => {
             </h2>
             
             <p className="section-subheading">
-              Choisissez parmi notre collection exclusive. Tous les prix sont en Dirhams Marocains (MAD).
+              {isPromotionActive 
+                ? "Profitez de notre promotion spéciale ! Tous les maillots à 150 DH jusqu'au 22 décembre 2025."
+                : "Choisissez parmi notre collection exclusive. Tous les maillots à 180 DH."
+              }
             </p>
           </div>
 
@@ -1687,13 +1881,25 @@ const FootballJerseysShop = () => {
           {/* Grille de produits */}
           <div className="products-grid">
             {filteredProducts.map(product => {
-              const price = formatPrice(product.priceEUR);
               const isFav = favoriteItems.includes(product.id);
               
               return (
-                <div key={product.id} className="product-card">
+                <motion.div
+                  key={product.id}
+                  className="product-card"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  whileHover={{ y: -5 }}
+                >
                   {product.labels.includes("Nouveau") && (
                     <div className="product-badge">NOUVEAU</div>
+                  )}
+                  
+                  {isPromotionActive && (
+                    <div className="product-badge promo-badge">
+                      <Tag size={12} /> PROMO
+                    </div>
                   )}
                   
                   <button 
@@ -1703,7 +1909,7 @@ const FootballJerseysShop = () => {
                       toggleFavorite(product.id);
                     }}
                   >
-                    <Heart size={20} />
+                    <Heart size={20} fill={isFav ? "currentColor" : "none"} />
                   </button>
                   
                   <div className="product-image-container">
@@ -1724,8 +1930,17 @@ const FootballJerseysShop = () => {
                     <p className="product-name">{product.name}</p>
                     
                     <div className="price-row">
-                      <span className="price-euro">{price.euro}</span>
-                      <span className="price-mad">{price.mad}</span>
+                      <span className="price-mad">
+                        {formatPrice(product.priceMAD)}
+                      </span>
+                      {isPromotionActive && (
+                        <div className="promotion-price">
+                          <span className="old-price">180 DH</span>
+                          <span className="savings-badge">
+                            Économisez 30 DH
+                          </span>
+                        </div>
+                      )}
                     </div>
                     
                     <div className="features-list">
@@ -1739,11 +1954,11 @@ const FootballJerseysShop = () => {
                     
                     <div className="action-buttons">
                       <button 
-                        className="primary-action"
+                        className={`primary-action ${isPromotionActive ? 'promo-action' : ''}`}
                         onClick={() => handleSelectProduct(product)}
                       >
                         <ShoppingCart size={18} />
-                        Voir détails
+                        {isPromotionActive ? "Profiter de l'offre" : "Voir détails"}
                       </button>
                       
                       <button 
@@ -1754,14 +1969,19 @@ const FootballJerseysShop = () => {
                       </button>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               );
             })}
           </div>
 
           {/* Section avantages */}
           <div className="advantages-section">
-            <div className="advantage-card">
+            <motion.div 
+              className="advantage-card"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
               <div className="advantage-icon">
                 <Truck size={24} />
               </div>
@@ -1770,9 +1990,14 @@ const FootballJerseysShop = () => {
                 Livraison en 24-48h dans toutes les villes du Maroc.
                 Suivi en temps réel.
               </p>
-            </div>
+            </motion.div>
             
-            <div className="advantage-card">
+            <motion.div 
+              className="advantage-card"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
               <div className="advantage-icon">
                 <Shield size={24} />
               </div>
@@ -1781,9 +2006,14 @@ const FootballJerseysShop = () => {
                 Maillots officiels certifiés. 
                 Garantie de qualité et d'authenticité.
               </p>
-            </div>
+            </motion.div>
             
-            <div className="advantage-card">
+            <motion.div 
+              className="advantage-card"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
               <div className="advantage-icon">
                 <Headphones size={24} />
               </div>
@@ -1791,9 +2021,14 @@ const FootballJerseysShop = () => {
               <p className="advantage-description">
                 Notre équipe est disponible 7j/7 pour vous accompagner.
               </p>
-            </div>
+            </motion.div>
             
-            <div className="advantage-card">
+            <motion.div 
+              className="advantage-card"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
               <div className="advantage-icon">
                 <RefreshCw size={24} />
               </div>
@@ -1801,82 +2036,9 @@ const FootballJerseysShop = () => {
               <p className="advantage-description">
                 Retour gratuit sous 14 jours si le produit ne vous convient pas.
               </p>
-            </div>
+            </motion.div>
           </div>
         </main>
-
-        {/* Footer */}
-        <footer className="main-footer">
-          <div className="footer-wrapper">
-            <div className="footer-grid">
-              <div className="footer-column">
-                <h3>Maillots Pro</h3>
-                <p style={{ color: 'var(--color-gray-400)', lineHeight: '1.6' }}>
-                  Votre destination pour les maillots officiels africains.
-                  Livraison rapide dans tout le Maroc.
-                </p>
-                <div className="social-icons">
-                  <a href="#" className="social-icon">
-                    <Facebook size={20} />
-                  </a>
-                  <a href="#" className="social-icon">
-                    <Instagram size={20} />
-                  </a>
-                  <a href="#" className="social-icon">
-                    <Twitter size={20} />
-                  </a>
-                </div>
-              </div>
-              
-              <div className="footer-column">
-                <h3>Liens rapides</h3>
-                <ul className="footer-links">
-                  <li><a href="#">Accueil</a></li>
-                  <li><a href="#maillots">Collection</a></li>
-                  <li><a href="#">Nouveautés</a></li>
-                  <li><a href="#">Bestsellers</a></li>
-                  <li><a href="#">Guide des tailles</a></li>
-                </ul>
-              </div>
-              
-              <div className="footer-column">
-                <h3>Support</h3>
-                <ul className="footer-links">
-                  <li><a href="#">Contactez-nous</a></li>
-                  <li><a href="#">Livraison & Retours</a></li>
-                  <li><a href="#">FAQ</a></li>
-                  <li><a href="#">Politique de confidentialité</a></li>
-                  <li><a href="#">Conditions générales</a></li>
-                </ul>
-              </div>
-              
-              <div className="footer-column">
-                <h3>Contact</h3>
-                <ul className="footer-links">
-                  <li style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <PhoneCall size={16} />
-                    <span>+212 6 XX XX XX XX</span>
-                  </li>
-                  <li style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Mail size={16} />
-                    <span>contact@maillotspro.ma</span>
-                  </li>
-                  <li style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <MapPin size={16} />
-                    <span>Casablanca, Maroc</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-            
-            <div className="footer-bottom">
-              <p>&copy; 2024 Maillots Pro. Tous droits réservés.</p>
-              <p style={{ marginTop: '0.5rem' }}>
-                Paiements acceptés: Espèces à la livraison • Virement bancaire
-              </p>
-            </div>
-          </div>
-        </footer>
 
         {/* Modal détail produit */}
         <AnimatePresence>
@@ -1897,7 +2059,9 @@ const FootballJerseysShop = () => {
                   <div>
                     <h2 className="modal-title">Configuration de votre commande</h2>
                     <p style={{ color: 'var(--color-gray-300)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
-                      Sélectionnez la taille et la quantité
+                      {isPromotionActive 
+                        ? "Profitez de notre promotion spéciale !" 
+                        : "Sélectionnez la taille et la quantité"}
                     </p>
                   </div>
                   <button 
@@ -1911,6 +2075,33 @@ const FootballJerseysShop = () => {
                 <div className="product-modal-body">
                   <div className="product-modal-content">
                     <div>
+                      {isPromotionActive && (
+                        <motion.div
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          style={{
+                            background: 'var(--color-promotion-light)',
+                            border: '2px solid var(--color-promotion)',
+                            borderRadius: 'var(--radius-lg)',
+                            padding: '1rem',
+                            marginBottom: '1rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem'
+                          }}
+                        >
+                          <Flame size={20} color="var(--color-promotion)" />
+                          <div>
+                            <strong style={{ color: 'var(--color-promotion)' }}>
+                              PROMOTION EN COURS
+                            </strong>
+                            <p style={{ fontSize: '0.875rem', marginTop: '0.25rem', color: 'var(--color-promotion-dark)' }}>
+                              Prix spécial : 150 DH au lieu de 180 DH
+                            </p>
+                          </div>
+                        </motion.div>
+                      )}
+                      
                       <img 
                         src={selectedProduct.image} 
                         alt={selectedProduct.country}
@@ -1921,7 +2112,10 @@ const FootballJerseysShop = () => {
                           {selectedProduct.country} - {selectedProduct.name}
                         </h3>
                         <div className="product-modal-price">
-                          {formatPrice(selectedProduct.priceEUR).mad}
+                          {formatPrice(selectedProduct.priceMAD)}
+                          {isPromotionActive && (
+                            <span className="price-after-promotion">180 DH</span>
+                          )}
                         </div>
                         <div className="product-modal-rating">
                           <Star size={18} fill="var(--color-accent)" color="var(--color-accent)" />
@@ -1962,13 +2156,15 @@ const FootballJerseysShop = () => {
                         
                         <div className="modal-sizes-container">
                           {selectedProduct.availableSizes.map(size => (
-                            <div
+                            <motion.div
                               key={size}
                               className={`modal-size-option ${selectedSize === size ? "selected" : ""}`}
                               onClick={() => setSelectedSize(size)}
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
                             >
                               <div className="modal-size-text">{size}</div>
-                            </div>
+                            </motion.div>
                           ))}
                         </div>
                       </div>
@@ -1977,19 +2173,23 @@ const FootballJerseysShop = () => {
                       <div className="modal-quantity-selector">
                         <h3 style={{ color: 'var(--color-gray-900)', marginBottom: '1rem' }}>Quantité</h3>
                         <div className="modal-quantity-controls">
-                          <button 
+                          <motion.button 
                             className="modal-quantity-button"
                             onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
                           >
                             <Minus size={20} />
-                          </button>
+                          </motion.button>
                           <span className="modal-quantity-display">{quantity}</span>
-                          <button 
+                          <motion.button 
                             className="modal-quantity-button"
                             onClick={() => setQuantity(Math.min(selectedProduct.inventory, quantity + 1))}
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
                           >
                             <Plus size={20} />
-                          </button>
+                          </motion.button>
                           <div className="modal-stock-info">
                             <Package size={14} />
                             Stock: {selectedProduct.inventory} unités
@@ -2004,29 +2204,47 @@ const FootballJerseysShop = () => {
                         </h3>
                         
                         <div className="modal-summary-line">
-                          <span>Sous-total:</span>
-                          <span>{formatPrice(selectedProduct.priceEUR * quantity).mad}</span>
+                          <span>Prix unitaire:</span>
+                          <span>{formatPrice(selectedProduct.priceMAD)}</span>
+                        </div>
+                        
+                        <div className="modal-summary-line">
+                          <span>Sous-total ({quantity} × {selectedProduct.priceMAD} DH):</span>
+                          <span>{calculateTotal().formatted.subtotal}</span>
                         </div>
                         
                         <div className="modal-summary-line">
                           <span>Livraison:</span>
-                          <span>{DELIVERY_FEE} MAD</span>
+                          <span>{calculateTotal().formatted.delivery}</span>
                         </div>
+                        
+                        {isPromotionActive && (
+                          <div className="modal-summary-line" style={{ color: 'var(--color-promotion)', fontWeight: '600' }}>
+                            <span>Économie réalisée:</span>
+                            <span>{(NORMAL_PRICE - PROMOTION_PRICE) * quantity} DH</span>
+                          </div>
+                        )}
                         
                         <div className="modal-summary-total">
                           <span>Total à payer:</span>
-                          <span>{calculateTotal().mad}</span>
+                          <span>{calculateTotal().formatted.total}</span>
                         </div>
                         
-                        <button 
-                          className="modal-checkout-button"
+                        <motion.button 
+                          className={`modal-checkout-button ${isPromotionActive ? 'promo-button' : ''}`}
                           onClick={handleOpenOrderForm}
                           disabled={!selectedSize}
+                          whileHover={{ scale: selectedSize ? 1.02 : 1 }}
+                          whileTap={{ scale: selectedSize ? 0.98 : 1 }}
                         >
                           <CreditCard size={20} />
-                          {selectedSize ? "Passer la commande" : "Choisissez une taille"}
+                          {selectedSize 
+                            ? isPromotionActive 
+                              ? "Profiter de l'offre" 
+                              : "Passer la commande"
+                            : "Choisissez une taille"}
                           <ArrowRight size={20} />
-                        </button>
+                        </motion.button>
                       </div>
                     </div>
                   </div>
@@ -2069,6 +2287,20 @@ const FootballJerseysShop = () => {
                     }}>
                       Numéro de commande: #{Math.random().toString(36).substr(2, 9).toUpperCase()}
                     </p>
+                    {isPromotionActive && (
+                      <motion.p 
+                        style={{ 
+                          color: 'var(--color-promotion)', 
+                          fontWeight: '600',
+                          marginTop: '1rem'
+                        }}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.5 }}
+                      >
+                        ✅ Vous avez bénéficié de notre promotion spéciale !
+                      </motion.p>
+                    )}
                   </div>
                 ) : (
                   <>
@@ -2084,12 +2316,16 @@ const FootballJerseysShop = () => {
                     
                     <div className="modal-body">
                       {/* Récap commande */}
-                      <div style={{ 
-                        background: 'var(--color-gray-50)',
-                        borderRadius: 'var(--radius-lg)',
-                        padding: '1.5rem',
-                        marginBottom: '2rem'
-                      }}>
+                      <motion.div 
+                        style={{ 
+                          background: 'var(--color-gray-50)',
+                          borderRadius: 'var(--radius-lg)',
+                          padding: '1.5rem',
+                          marginBottom: '2rem'
+                        }}
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                      >
                         <div style={{ 
                           display: 'flex', 
                           alignItems: 'center', 
@@ -2113,8 +2349,36 @@ const FootballJerseysShop = () => {
                             <p style={{ color: 'var(--color-gray-600)', fontSize: '0.875rem' }}>
                               Taille: {selectedSize} • Quantité: {quantity}
                             </p>
+                            <p style={{ 
+                              color: 'var(--color-gray-700)', 
+                              fontWeight: '700',
+                              marginTop: '0.25rem'
+                            }}>
+                              {formatPrice(selectedProduct?.priceMAD)} par maillot
+                            </p>
                           </div>
                         </div>
+                        {isPromotionActive && (
+                          <motion.div 
+                            style={{ 
+                              background: 'var(--color-promotion-light)',
+                              border: '1px solid var(--color-promotion)',
+                              borderRadius: 'var(--radius)',
+                              padding: '0.75rem',
+                              marginBottom: '0.75rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem'
+                            }}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                          >
+                            <Tag size={16} color="var(--color-promotion)" />
+                            <span style={{ fontSize: '0.875rem', color: 'var(--color-promotion)' }}>
+                              Promotion appliquée : -30 DH par maillot
+                            </span>
+                          </motion.div>
+                        )}
                         <div style={{ 
                           display: 'flex', 
                           justifyContent: 'space-between',
@@ -2122,9 +2386,9 @@ const FootballJerseysShop = () => {
                           color: 'var(--color-gray-900)'
                         }}>
                           <span>Total:</span>
-                          <span>{calculateTotal().mad}</span>
+                          <span>{calculateTotal().formatted.total}</span>
                         </div>
-                      </div>
+                      </motion.div>
                       
                       <form onSubmit={handleSubmitOrder}>
                         <div className="form-group">
@@ -2217,7 +2481,11 @@ const FootballJerseysShop = () => {
                             Méthode de paiement
                           </label>
                           <div className="payment-options">
-                            <label className={`payment-choice ${customerData.paymentMethod === "cash" ? "selected" : ""}`}>
+                            <motion.label 
+                              className={`payment-choice ${customerData.paymentMethod === "cash" ? "selected" : ""}`}
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                            >
                               <input
                                 type="radio"
                                 name="paymentMethod"
@@ -2233,9 +2501,13 @@ const FootballJerseysShop = () => {
                                   Espèces
                                 </div>
                               </div>
-                            </label>
+                            </motion.label>
                             
-                            <label className={`payment-choice ${customerData.paymentMethod === "transfer" ? "selected" : ""}`}>
+                            <motion.label 
+                              className={`payment-choice ${customerData.paymentMethod === "transfer" ? "selected" : ""}`}
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                            >
                               <input
                                 type="radio"
                                 name="paymentMethod"
@@ -2251,7 +2523,7 @@ const FootballJerseysShop = () => {
                                   CIH, Attijariwafa
                                 </div>
                               </div>
-                            </label>
+                            </motion.label>
                           </div>
                         </div>
                         
@@ -2269,10 +2541,12 @@ const FootballJerseysShop = () => {
                           />
                         </div>
                         
-                        <button 
+                        <motion.button 
                           type="submit" 
-                          className="submit-order"
+                          className={`submit-order ${isPromotionActive ? 'promo-submit' : ''}`}
                           disabled={isProcessing}
+                          whileHover={{ scale: isProcessing ? 1 : 1.02 }}
+                          whileTap={{ scale: isProcessing ? 1 : 0.98 }}
                         >
                           {isProcessing ? (
                             <>
@@ -2282,10 +2556,10 @@ const FootballJerseysShop = () => {
                           ) : (
                             <>
                               <Check size={20} />
-                              Confirmer la commande
+                              {isPromotionActive ? "Profiter de l'offre" : "Confirmer la commande"}
                             </>
                           )}
-                        </button>
+                        </motion.button>
                       </form>
                     </div>
                   </>
@@ -2332,6 +2606,13 @@ const FootballJerseysShop = () => {
                   <ShoppingBag size={20} />
                   Collection
                 </a>
+                
+                {isPromotionActive && (
+                  <a href="#" className="mobile-nav-link promo-link">
+                    <Flame size={20} />
+                    Promotion 150 DH
+                  </a>
+                )}
                 
                 <a href="#" className="mobile-nav-link">
                   <Heart size={20} />

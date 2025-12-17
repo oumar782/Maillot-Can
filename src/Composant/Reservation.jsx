@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { 
-  CheckCircle, Send, Shield, Truck, Clock,
-  Loader2, User, Phone, MapPin, Flag, Shirt,
-  Package, MessageSquare, ChevronDown
+  CheckCircle, Loader2, Send, Shield, Truck, Clock,
+  User, Phone, MapPin, Home, Flag, Shirt,
+  Package, MessageSquare, Building, Navigation
 } from "lucide-react";
 
 const ReservationForm = () => {
@@ -12,6 +12,8 @@ const ReservationForm = () => {
   const [formData, setFormData] = useState({
     fullName: "",
     phone: "",
+    quartier: "",
+    city: "",
     address: "",
     country: "",
     jerseyType: "",
@@ -20,14 +22,22 @@ const ReservationForm = () => {
     message: ""
   });
 
+  // Villes du Maroc
+  const citiesMorocco = [
+    "Casablanca", "Rabat", "Marrakech", "Fès", "Tanger",
+    "Meknès", "Agadir", "Oujda", "Kenitra", "Tétouan",
+    "Safi", "Mohammedia", "El Jadida", "Nador", "Settat",
+    "Béni Mellal", "Khémisset", "Larache", "Khouribga", "Autre"
+  ];
+
   // Options pour les maillots selon le pays
   const jerseyOptions = {
     "cote-divoire": [{ value: "orange", label: "🧡 Modèle Orange" }],
-    mali: [
+    "mali": [
       { value: "vert", label: "💚 Modèle Vert" },
       { value: "blanc", label: "🤍 Modèle Blanc" },
     ],
-    senegal: [
+    "senegal": [
       { value: "vert", label: "💚 Modèle Vert" },
       { value: "blanc", label: "🤍 Modèle Blanc" },
     ],
@@ -52,8 +62,10 @@ const ReservationForm = () => {
     setIsSubmitting(true);
     
     // Validation simple
-    if (!formData.fullName || !formData.phone || !formData.address || !formData.country || 
-        !formData.jerseyType || !formData.size || !formData.quantity) {
+    const requiredFields = ['fullName', 'phone', 'quartier', 'city', 'address', 'country', 'jerseyType', 'size', 'quantity'];
+    const missingFields = requiredFields.filter(field => !formData[field]);
+    
+    if (missingFields.length > 0) {
       alert("Veuillez remplir tous les champs obligatoires");
       setIsSubmitting(false);
       return;
@@ -84,6 +96,8 @@ const ReservationForm = () => {
       setFormData({
         fullName: "",
         phone: "",
+        quartier: "",
+        city: "",
         address: "",
         country: "",
         jerseyType: "",
@@ -95,48 +109,111 @@ const ReservationForm = () => {
   };
 
   return (
-    <section id="reservation" className="py-16 md:py-24 relative overflow-hidden" style={{
+    <section id="reservation" className="reservation-section" style={{
       background: 'var(--color-gray-900)',
-      color: 'var(--color-white)'
+      color: 'var(--color-white)',
+      padding: '4rem 1rem',
+      position: 'relative',
+      overflow: 'hidden'
     }}>
       {/* Décorations */}
-      <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-var(--color-accent)/50 to-transparent" />
-      <div className="absolute top-20 right-10 w-72 h-72 bg-var(--color-accent)/10 rounded-full blur-3xl" />
-      <div className="absolute bottom-20 left-10 w-96 h-96 bg-var(--color-primary)/10 rounded-full blur-3xl" />
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '1px',
+        background: 'linear-gradient(to right, transparent, var(--color-accent), transparent)'
+      }} />
       
-      {/* Pattern */}
-      <div className="absolute inset-0 opacity-[0.02]" style={{
-        backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 0)`,
-        backgroundSize: '40px 40px',
+      <div style={{
+        position: 'absolute',
+        top: '5rem',
+        right: '2.5rem',
+        width: '18rem',
+        height: '18rem',
+        background: 'rgba(245, 158, 11, 0.1)',
+        borderRadius: '50%',
+        filter: 'blur(48px)'
+      }} />
+      
+      <div style={{
+        position: 'absolute',
+        bottom: '5rem',
+        left: '2.5rem',
+        width: '24rem',
+        height: '24rem',
+        background: 'rgba(0, 0, 0, 0.1)',
+        borderRadius: '50%',
+        filter: 'blur(48px)'
       }} />
 
-      <div className="container mx-auto px-4 relative z-10">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+      <div className="container" style={{
+        maxWidth: '1200px',
+        margin: '0 auto',
+        position: 'relative',
+        zIndex: 10
+      }}>
+        <div className="reservation-grid" style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr',
+          gap: '4rem',
+          alignItems: 'center'
+        }}>
           {/* Côté gauche - Informations */}
           <motion.div
             initial={{ opacity: 0, x: -40 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
+            style={{ maxWidth: '600px' }}
           >
-            <span className="inline-flex items-center gap-2 px-4 py-2 bg-var(--color-accent)/20 text-var(--color-accent) font-bold text-sm rounded-full mb-6">
-              <span className="w-2 h-2 bg-var(--color-accent) rounded-full" />
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.5rem 1rem',
+              background: 'rgba(245, 158, 11, 0.2)',
+              color: 'var(--color-accent)',
+              fontWeight: 'bold',
+              fontSize: '0.875rem',
+              borderRadius: '9999px',
+              marginBottom: '1.5rem'
+            }}>
+              <span style={{
+                width: '0.5rem',
+                height: '0.5rem',
+                background: 'var(--color-accent)',
+                borderRadius: '50%'
+              }} />
               RÉSERVATION EXPRESS
-            </span>
+            </div>
             
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-white mb-6 leading-tight">
+            <h2 style={{
+              fontSize: 'clamp(2rem, 4vw, 3.5rem)',
+              fontWeight: '900',
+              color: 'var(--color-white)',
+              marginBottom: '1.5rem',
+              lineHeight: '1.1'
+            }}>
               Réservez en
               <br />
               <span style={{ color: 'var(--color-accent)' }}>2 minutes</span>
             </h2>
             
-            <p className="text-lg text-gray-300 mb-10 max-w-md">
+            <p style={{
+              fontSize: '1.125rem',
+              color: 'var(--color-gray-300)',
+              marginBottom: '2.5rem',
+              maxWidth: '500px',
+              lineHeight: '1.6'
+            }}>
               Remplissez le formulaire ci-contre et recevez votre maillot 
               avant le grand événement. Livraison garantie !
             </p>
 
             {/* Caractéristiques */}
-            <div className="space-y-4 mb-10">
+            <div style={{ marginBottom: '2.5rem' }}>
               {features.map((feature, index) => (
                 <motion.div
                   key={feature.text}
@@ -144,29 +221,63 @@ const ReservationForm = () => {
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.4, delay: index * 0.1 }}
-                  className="flex items-center gap-4"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    marginBottom: '1rem'
+                  }}
                 >
-                  <div className="w-12 h-12 rounded-2xl bg-var(--color-accent)/20 flex items-center justify-center">
-                    <feature.icon className="w-5 h-5" style={{ color: 'var(--color-accent)' }} />
+                  <div style={{
+                    width: '3rem',
+                    height: '3rem',
+                    borderRadius: '1rem',
+                    background: 'rgba(245, 158, 11, 0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <feature.icon size={20} style={{ color: 'var(--color-accent)' }} />
                   </div>
-                  <span className="text-gray-200 font-medium">{feature.text}</span>
+                  <span style={{
+                    color: 'var(--color-gray-200)',
+                    fontWeight: '500'
+                  }}>{feature.text}</span>
                 </motion.div>
               ))}
             </div>
 
             {/* Badges de confiance */}
-            <div className="flex items-center gap-6">
-              <div className="flex -space-x-2">
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1.5rem'
+            }}>
+              <div style={{ display: 'flex', marginRight: '-0.5rem' }}>
                 {["🇨🇮", "🇲🇱", "🇸🇳"].map((flag, i) => (
                   <div
                     key={i}
-                    className="w-10 h-10 rounded-full bg-white/10 border-2 border-gray-800 flex items-center justify-center text-xl"
+                    style={{
+                      width: '2.5rem',
+                      height: '2.5rem',
+                      borderRadius: '50%',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      border: '2px solid var(--color-gray-800)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '1.25rem',
+                      marginLeft: i > 0 ? '-0.5rem' : '0'
+                    }}
                   >
                     {flag}
                   </div>
                 ))}
               </div>
-              <p className="text-sm text-gray-400">
+              <p style={{
+                fontSize: '0.875rem',
+                color: 'var(--color-gray-400)'
+              }}>
                 <span style={{ color: 'var(--color-accent)', fontWeight: 'bold' }}>3 pays</span> disponibles
               </p>
             </div>
@@ -179,35 +290,64 @@ const ReservationForm = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
+            <div style={{
+              background: 'var(--color-white)',
+              borderRadius: '1.5rem',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+              padding: '2rem'
+            }}>
               {isSuccess ? (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="text-center py-12"
+                  style={{ textAlign: 'center', padding: '3rem 0' }}
                 >
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ type: "spring", delay: 0.2 }}
-                    className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6"
+                    style={{
+                      width: '5rem',
+                      height: '5rem',
+                      background: 'rgba(16, 185, 129, 0.1)',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      margin: '0 auto 2rem'
+                    }}
                   >
-                    <CheckCircle className="w-10 h-10" style={{ color: 'var(--color-success)' }} />
+                    <CheckCircle size={40} style={{ color: 'var(--color-success)' }} />
                   </motion.div>
-                  <h3 className="text-2xl font-black text-gray-900 mb-3">
+                  <h3 style={{
+                    fontSize: '1.875rem',
+                    fontWeight: '900',
+                    color: 'var(--color-gray-900)',
+                    marginBottom: '0.75rem'
+                  }}>
                     C'est confirmé ! 🎉
                   </h3>
-                  <p className="text-gray-600 text-lg">
+                  <p style={{ color: 'var(--color-gray-600)', fontSize: '1.125rem' }}>
                     Vous recevrez un SMS de confirmation sous 24h.
                   </p>
                 </motion.div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-5">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr',
+                    gap: '1rem'
+                  }}>
                     {/* Nom complet */}
                     <div>
-                      <label className="block text-gray-900 font-semibold mb-2">
-                        <User size={16} className="inline mr-2" />
+                      <label style={{
+                        display: 'block',
+                        color: 'var(--color-gray-900)',
+                        fontWeight: '600',
+                        marginBottom: '0.5rem',
+                        fontSize: '0.875rem'
+                      }}>
+                        <User size={14} style={{ display: 'inline', marginRight: '0.5rem' }} />
                         Nom complet *
                       </label>
                       <input
@@ -216,15 +356,33 @@ const ReservationForm = () => {
                         value={formData.fullName}
                         onChange={handleInputChange}
                         placeholder="Ex: Kouamé Jean"
-                        className="w-full h-12 px-4 rounded-lg bg-gray-100 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-var(--color-accent) focus:border-transparent"
+                        style={{
+                          width: '100%',
+                          height: '3rem',
+                          padding: '0 1rem',
+                          borderRadius: '0.75rem',
+                          background: 'var(--color-gray-100)',
+                          border: '2px solid var(--color-gray-300)',
+                          fontSize: '1rem',
+                          outline: 'none',
+                          transition: 'all 0.3s'
+                        }}
+                        onFocus={(e) => e.target.style.borderColor = 'var(--color-accent)'}
+                        onBlur={(e) => e.target.style.borderColor = 'var(--color-gray-300)'}
                         required
                       />
                     </div>
 
                     {/* Téléphone */}
                     <div>
-                      <label className="block text-gray-900 font-semibold mb-2">
-                        <Phone size={16} className="inline mr-2" />
+                      <label style={{
+                        display: 'block',
+                        color: 'var(--color-gray-900)',
+                        fontWeight: '600',
+                        marginBottom: '0.5rem',
+                        fontSize: '0.875rem'
+                      }}>
+                        <Phone size={14} style={{ display: 'inline', marginRight: '0.5rem' }} />
                         Téléphone *
                       </label>
                       <input
@@ -232,34 +390,156 @@ const ReservationForm = () => {
                         name="phone"
                         value={formData.phone}
                         onChange={handleInputChange}
-                        placeholder="+225 07 XX XX XX XX"
-                        className="w-full h-12 px-4 rounded-lg bg-gray-100 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-var(--color-accent) focus:border-transparent"
+                        placeholder="+212 6 XX XX XX XX"
+                        style={{
+                          width: '100%',
+                          height: '3rem',
+                          padding: '0 1rem',
+                          borderRadius: '0.75rem',
+                          background: 'var(--color-gray-100)',
+                          border: '2px solid var(--color-gray-300)',
+                          fontSize: '1rem',
+                          outline: 'none',
+                          transition: 'all 0.3s'
+                        }}
+                        onFocus={(e) => e.target.style.borderColor = 'var(--color-accent)'}
+                        onBlur={(e) => e.target.style.borderColor = 'var(--color-gray-300)'}
                         required
                       />
                     </div>
                   </div>
 
-                  {/* Adresse */}
+                  {/* Quartier et Ville */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '1rem'
+                  }}>
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        color: 'var(--color-gray-900)',
+                        fontWeight: '600',
+                        marginBottom: '0.5rem',
+                        fontSize: '0.875rem'
+                      }}>
+                        <Home size={14} style={{ display: 'inline', marginRight: '0.5rem' }} />
+                        Quartier *
+                      </label>
+                      <input
+                        type="text"
+                        name="quartier"
+                        value={formData.quartier}
+                        onChange={handleInputChange}
+                        placeholder="Ex: Hay Mohammadi"
+                        style={{
+                          width: '100%',
+                          height: '3rem',
+                          padding: '0 1rem',
+                          borderRadius: '0.75rem',
+                          background: 'var(--color-gray-100)',
+                          border: '2px solid var(--color-gray-300)',
+                          fontSize: '1rem',
+                          outline: 'none',
+                          transition: 'all 0.3s'
+                        }}
+                        onFocus={(e) => e.target.style.borderColor = 'var(--color-accent)'}
+                        onBlur={(e) => e.target.style.borderColor = 'var(--color-gray-300)'}
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        color: 'var(--color-gray-900)',
+                        fontWeight: '600',
+                        marginBottom: '0.5rem',
+                        fontSize: '0.875rem'
+                      }}>
+                        <Building size={14} style={{ display: 'inline', marginRight: '0.5rem' }} />
+                        Ville *
+                      </label>
+                      <select
+                        name="city"
+                        value={formData.city}
+                        onChange={handleInputChange}
+                        style={{
+                          width: '100%',
+                          height: '3rem',
+                          padding: '0 1rem',
+                          borderRadius: '0.75rem',
+                          background: 'var(--color-gray-100)',
+                          border: '2px solid var(--color-gray-300)',
+                          fontSize: '1rem',
+                          outline: 'none',
+                          transition: 'all 0.3s',
+                          appearance: 'none',
+                          cursor: 'pointer'
+                        }}
+                        onFocus={(e) => e.target.style.borderColor = 'var(--color-accent)'}
+                        onBlur={(e) => e.target.style.borderColor = 'var(--color-gray-300)'}
+                        required
+                      >
+                        <option value="">Sélectionnez votre ville</option>
+                        {citiesMorocco.map(city => (
+                          <option key={city} value={city}>{city}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Adresse détaillée */}
                   <div>
-                    <label className="block text-gray-900 font-semibold mb-2">
-                      <MapPin size={16} className="inline mr-2" />
-                      Adresse de livraison *
+                    <label style={{
+                      display: 'block',
+                      color: 'var(--color-gray-900)',
+                      fontWeight: '600',
+                      marginBottom: '0.5rem',
+                      fontSize: '0.875rem'
+                    }}>
+                      <MapPin size={14} style={{ display: 'inline', marginRight: '0.5rem' }} />
+                      Adresse détaillée *
                     </label>
                     <textarea
                       name="address"
                       value={formData.address}
                       onChange={handleInputChange}
-                      placeholder="Quartier, rue, repère..."
-                      className="w-full h-24 px-4 py-3 rounded-lg bg-gray-100 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-var(--color-accent) focus:border-transparent resize-none"
+                      placeholder="Rue, numéro, bâtiment, étage..."
+                      style={{
+                        width: '100%',
+                        height: '6rem',
+                        padding: '1rem',
+                        borderRadius: '0.75rem',
+                        background: 'var(--color-gray-100)',
+                        border: '2px solid var(--color-gray-300)',
+                        fontSize: '1rem',
+                        outline: 'none',
+                        transition: 'all 0.3s',
+                        resize: 'none',
+                        fontFamily: 'inherit'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = 'var(--color-accent)'}
+                      onBlur={(e) => e.target.style.borderColor = 'var(--color-gray-300)'}
                       required
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Pays */}
+                  {/* Pays et Modèle */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '1rem'
+                  }}>
                     <div>
-                      <label className="block text-gray-900 font-semibold mb-2">
-                        <Flag size={16} className="inline mr-2" />
+                      <label style={{
+                        display: 'block',
+                        color: 'var(--color-gray-900)',
+                        fontWeight: '600',
+                        marginBottom: '0.5rem',
+                        fontSize: '0.875rem'
+                      }}>
+                        <Flag size={14} style={{ display: 'inline', marginRight: '0.5rem' }} />
                         Équipe *
                       </label>
                       <select
@@ -269,7 +549,21 @@ const ReservationForm = () => {
                           handleInputChange(e);
                           setFormData(prev => ({ ...prev, jerseyType: "" }));
                         }}
-                        className="w-full h-12 px-4 rounded-lg bg-gray-100 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-var(--color-accent) focus:border-transparent appearance-none pr-10"
+                        style={{
+                          width: '100%',
+                          height: '3rem',
+                          padding: '0 1rem',
+                          borderRadius: '0.75rem',
+                          background: 'var(--color-gray-100)',
+                          border: '2px solid var(--color-gray-300)',
+                          fontSize: '1rem',
+                          outline: 'none',
+                          transition: 'all 0.3s',
+                          appearance: 'none',
+                          cursor: 'pointer'
+                        }}
+                        onFocus={(e) => e.target.style.borderColor = 'var(--color-accent)'}
+                        onBlur={(e) => e.target.style.borderColor = 'var(--color-gray-300)'}
                         required
                       >
                         <option value="">Choisir une équipe</option>
@@ -277,13 +571,17 @@ const ReservationForm = () => {
                         <option value="mali">🇲🇱 Mali</option>
                         <option value="senegal">🇸🇳 Sénégal</option>
                       </select>
-                      <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
                     </div>
 
-                    {/* Type de maillot */}
                     <div>
-                      <label className="block text-gray-900 font-semibold mb-2">
-                        <Shirt size={16} className="inline mr-2" />
+                      <label style={{
+                        display: 'block',
+                        color: 'var(--color-gray-900)',
+                        fontWeight: '600',
+                        marginBottom: '0.5rem',
+                        fontSize: '0.875rem'
+                      }}>
+                        <Shirt size={14} style={{ display: 'inline', marginRight: '0.5rem' }} />
                         Modèle *
                       </label>
                       <select
@@ -291,7 +589,22 @@ const ReservationForm = () => {
                         value={formData.jerseyType}
                         onChange={handleInputChange}
                         disabled={!formData.country}
-                        className="w-full h-12 px-4 rounded-lg bg-gray-100 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-var(--color-accent) focus:border-transparent appearance-none pr-10 disabled:opacity-50"
+                        style={{
+                          width: '100%',
+                          height: '3rem',
+                          padding: '0 1rem',
+                          borderRadius: '0.75rem',
+                          background: !formData.country ? 'var(--color-gray-200)' : 'var(--color-gray-100)',
+                          border: '2px solid var(--color-gray-300)',
+                          fontSize: '1rem',
+                          outline: 'none',
+                          transition: 'all 0.3s',
+                          appearance: 'none',
+                          cursor: formData.country ? 'pointer' : 'not-allowed',
+                          opacity: !formData.country ? 0.6 : 1
+                        }}
+                        onFocus={(e) => e.target.style.borderColor = 'var(--color-accent)'}
+                        onBlur={(e) => e.target.style.borderColor = 'var(--color-gray-300)'}
                         required
                       >
                         <option value="">Choisir un modèle</option>
@@ -305,17 +618,42 @@ const ReservationForm = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Taille */}
+                  {/* Taille et Quantité */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '1rem'
+                  }}>
                     <div>
-                      <label className="block text-gray-900 font-semibold mb-2">
+                      <label style={{
+                        display: 'block',
+                        color: 'var(--color-gray-900)',
+                        fontWeight: '600',
+                        marginBottom: '0.5rem',
+                        fontSize: '0.875rem'
+                      }}>
+                        <Navigation size={14} style={{ display: 'inline', marginRight: '0.5rem' }} />
                         Taille *
                       </label>
                       <select
                         name="size"
                         value={formData.size}
                         onChange={handleInputChange}
-                        className="w-full h-12 px-4 rounded-lg bg-gray-100 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-var(--color-accent) focus:border-transparent appearance-none pr-10"
+                        style={{
+                          width: '100%',
+                          height: '3rem',
+                          padding: '0 1rem',
+                          borderRadius: '0.75rem',
+                          background: 'var(--color-gray-100)',
+                          border: '2px solid var(--color-gray-300)',
+                          fontSize: '1rem',
+                          outline: 'none',
+                          transition: 'all 0.3s',
+                          appearance: 'none',
+                          cursor: 'pointer'
+                        }}
+                        onFocus={(e) => e.target.style.borderColor = 'var(--color-accent)'}
+                        onBlur={(e) => e.target.style.borderColor = 'var(--color-gray-300)'}
                         required
                       >
                         <option value="">Taille</option>
@@ -325,17 +663,36 @@ const ReservationForm = () => {
                       </select>
                     </div>
 
-                    {/* Quantité */}
                     <div>
-                      <label className="block text-gray-900 font-semibold mb-2">
-                        <Package size={16} className="inline mr-2" />
+                      <label style={{
+                        display: 'block',
+                        color: 'var(--color-gray-900)',
+                        fontWeight: '600',
+                        marginBottom: '0.5rem',
+                        fontSize: '0.875rem'
+                      }}>
+                        <Package size={14} style={{ display: 'inline', marginRight: '0.5rem' }} />
                         Quantité *
                       </label>
                       <select
                         name="quantity"
                         value={formData.quantity}
                         onChange={handleInputChange}
-                        className="w-full h-12 px-4 rounded-lg bg-gray-100 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-var(--color-accent) focus:border-transparent appearance-none pr-10"
+                        style={{
+                          width: '100%',
+                          height: '3rem',
+                          padding: '0 1rem',
+                          borderRadius: '0.75rem',
+                          background: 'var(--color-gray-100)',
+                          border: '2px solid var(--color-gray-300)',
+                          fontSize: '1rem',
+                          outline: 'none',
+                          transition: 'all 0.3s',
+                          appearance: 'none',
+                          cursor: 'pointer'
+                        }}
+                        onFocus={(e) => e.target.style.borderColor = 'var(--color-accent)'}
+                        onBlur={(e) => e.target.style.borderColor = 'var(--color-gray-300)'}
                         required
                       >
                         <option value="">Qté</option>
@@ -350,16 +707,36 @@ const ReservationForm = () => {
 
                   {/* Message optionnel */}
                   <div>
-                    <label className="block text-gray-900 font-semibold mb-2">
-                      <MessageSquare size={16} className="inline mr-2" />
+                    <label style={{
+                      display: 'block',
+                      color: 'var(--color-gray-900)',
+                      fontWeight: '600',
+                      marginBottom: '0.5rem',
+                      fontSize: '0.875rem'
+                    }}>
+                      <MessageSquare size={14} style={{ display: 'inline', marginRight: '0.5rem' }} />
                       Message (optionnel)
                     </label>
                     <textarea
                       name="message"
                       value={formData.message}
                       onChange={handleInputChange}
-                      placeholder="Instructions spéciales..."
-                      className="w-full h-20 px-4 py-3 rounded-lg bg-gray-100 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-var(--color-accent) focus:border-transparent resize-none"
+                      placeholder="Instructions spéciales, préférences de livraison..."
+                      style={{
+                        width: '100%',
+                        height: '5rem',
+                        padding: '1rem',
+                        borderRadius: '0.75rem',
+                        background: 'var(--color-gray-100)',
+                        border: '2px solid var(--color-gray-300)',
+                        fontSize: '1rem',
+                        outline: 'none',
+                        transition: 'all 0.3s',
+                        resize: 'none',
+                        fontFamily: 'inherit'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = 'var(--color-accent)'}
+                      onBlur={(e) => e.target.style.borderColor = 'var(--color-gray-300)'}
                     />
                   </div>
 
@@ -367,20 +744,42 @@ const ReservationForm = () => {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full h-14 text-lg font-bold rounded-lg transition-all flex items-center justify-center gap-2"
                     style={{
+                      width: '100%',
+                      height: '3.5rem',
+                      fontSize: '1.125rem',
+                      fontWeight: 'bold',
+                      borderRadius: '0.75rem',
                       background: 'linear-gradient(135deg, var(--color-accent), var(--color-accent-dark))',
-                      color: 'var(--color-white)'
+                      color: 'var(--color-white)',
+                      border: 'none',
+                      cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      transition: 'all 0.3s',
+                      opacity: isSubmitting ? 0.7 : 1
+                    }}
+                    onMouseOver={(e) => {
+                      if (!isSubmitting) {
+                        e.target.style.transform = 'translateY(-2px)';
+                        e.target.style.boxShadow = '0 10px 20px rgba(245, 158, 11, 0.3)';
+                      }
+                    }}
+                    onMouseOut={(e) => {
+                      e.target.style.transform = 'translateY(0)';
+                      e.target.style.boxShadow = 'none';
                     }}
                   >
                     {isSubmitting ? (
                       <>
-                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <Loader2 size={20} className="animate-spin" />
                         Envoi en cours...
                       </>
                     ) : (
                       <>
-                        <Send className="h-5 w-5" />
+                        <Send size={20} />
                         Confirmer ma réservation
                       </>
                     )}
@@ -391,6 +790,48 @@ const ReservationForm = () => {
           </motion.div>
         </div>
       </div>
+
+      <style jsx>{`
+        @media (min-width: 1024px) {
+          .reservation-grid {
+            grid-template-columns: 1fr 1fr !important;
+          }
+        }
+        
+        @media (max-width: 768px) {
+          .reservation-grid > div:first-child,
+          .reservation-grid > div:last-child {
+            max-width: 100% !important;
+          }
+          
+          .reservation-grid > div:last-child > div {
+            padding: 1.5rem !important;
+          }
+          
+          form > div[style*="grid-template-columns"] {
+            grid-template-columns: 1fr !important;
+          }
+        }
+        
+        .animate-spin {
+          animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+        
+        select:focus, input:focus, textarea:focus {
+          border-color: var(--color-accent) !important;
+          box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1) !important;
+        }
+        
+        ::placeholder {
+          color: var(--color-gray-500);
+        }
+      `}</style>
     </section>
   );
 };
