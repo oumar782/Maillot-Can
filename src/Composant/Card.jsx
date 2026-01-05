@@ -13,15 +13,9 @@ import {
   Grid, List, Plus, Minus,
   Search, Menu, Eye, TrendingUp,
   Headphones, Zap, RefreshCw, Lock,
-  Flame, Tag, Percent, Calendar
+  Flame, Tag, Percent, Calendar,
+  AlertCircle, Loader2, ExternalLink
 } from "lucide-react";
-
-// Import des images (à remplacer par vos images réelles)
-import jersey1 from "../assets/1.jpg";
-import jersey2 from "../assets/1.jpg";
-import jersey3 from "../assets/1.jpg";
-import jersey4 from "../assets/1.jpg";
-import jersey5 from "../assets/1.jpg";
 
 const FootballJerseysShop = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -40,22 +34,34 @@ const FootballJerseysShop = () => {
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderConfirmed, setOrderConfirmed] = useState(false);
+  const [orderNumber, setOrderNumber] = useState("");
   const [favoriteItems, setFavoriteItems] = useState([]);
   const [cartItems, setCartItems] = useState([]);
   const [activeCategory, setActiveCategory] = useState("all");
   const [showMobileNav, setShowMobileNav] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [showCartPanel, setShowCartPanel] = useState(false);
+  
+  // États pour les notifications
+  const [notification, setNotification] = useState({
+    show: false,
+    message: "",
+    type: "success"
+  });
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // URL de l'API
+  const API_URL = "https://backend-foot-omega.vercel.app/api/commande";
 
   // Prix et promotion
-  const DELIVERY_FEE = 29; // MAD
+  const DELIVERY_FEE = 29;
   const PROMOTION_END_DATE = new Date("2025-12-22");
   const currentDate = new Date();
   const isPromotionActive = currentDate <= PROMOTION_END_DATE;
   const NORMAL_PRICE = 180;
   const PROMOTION_PRICE = 150;
   
-  // Obtenir le prix actuel
   const getProductPrice = () => {
     return isPromotionActive ? PROMOTION_PRICE : NORMAL_PRICE;
   };
@@ -77,7 +83,7 @@ const FootballJerseysShop = () => {
       mainColor: "orange",
       highlightColor: "#FF6B00",
       flag: "🇨🇮",
-      image: jersey1,
+      image: "https://images.unsplash.com/photo-1575361204480-aadea25e6e68?w=400&h=400&fit=crop",
       shortDesc: "Maillot officiel domicile des Éléphants de Côte d'Ivoire.",
       highlights: [
         "Technologie Dri-FIT ADVANCE™",
@@ -98,7 +104,7 @@ const FootballJerseysShop = () => {
       mainColor: "green",
       highlightColor: "#14532D",
       flag: "🇲🇱",
-      image: jersey2,
+      image: "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=400&h=400&fit=crop",
       shortDesc: "Maillot domicile officiel des Aigles du Mali.",
       highlights: [
         "Tissu Climacool®",
@@ -119,7 +125,7 @@ const FootballJerseysShop = () => {
       mainColor: "white",
       highlightColor: "#FFFFFF",
       flag: "🇲🇱",
-      image: jersey3,
+      image: "https://images.unsplash.com/photo-1575361204480-aadea25e6e68?w-400&h=400&fit=crop",
       shortDesc: "Maillot extérieur officiel des Aigles du Mali.",
       highlights: [
         "Tissu micro-mesh",
@@ -140,7 +146,7 @@ const FootballJerseysShop = () => {
       mainColor: "green",
       highlightColor: "#14532D",
       flag: "🇸🇳",
-      image: jersey4,
+      image: "https://images.unsplash.com/photo-1575361204480-aadea25e6e68?w=400&h=400&fit=crop",
       shortDesc: "Maillot officiel domicile des Lions de la Teranga.",
       highlights: [
         "Technologie AeroSwift",
@@ -161,7 +167,7 @@ const FootballJerseysShop = () => {
       mainColor: "white",
       highlightColor: "#FFFFFF",
       flag: "🇸🇳",
-      image: jersey5,
+      image: "https://images.unsplash.com/photo-1575361204480-aadea25e6e68?w=400&h=400&fit=crop",
       shortDesc: "Maillot extérieur officiel des Lions de la Teranga.",
       highlights: [
         "Tissu carbon pro",
@@ -214,6 +220,49 @@ const FootballJerseysShop = () => {
     return diffDays > 0 ? diffDays : 0;
   };
 
+  // Afficher une notification
+  const showNotification = (message, type = "success") => {
+    setNotification({
+      show: true,
+      message,
+      type
+    });
+    
+    setTimeout(() => {
+      setNotification({ show: false, message: "", type: "success" });
+    }, 5000);
+  };
+
+  // Valider les données du formulaire
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!customerData.fullName.trim()) {
+      newErrors.fullName = "Le nom complet est requis";
+    }
+    
+    if (!customerData.phone.trim()) {
+      newErrors.phone = "Le numéro de téléphone est requis";
+    } else if (!/^0[5-7][0-9]{8}$/.test(customerData.phone.replace(/\s/g, ''))) {
+      newErrors.phone = "Numéro de téléphone invalide (ex: 0612345678)";
+    }
+    
+    if (customerData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerData.email)) {
+      newErrors.email = "Email invalide";
+    }
+    
+    if (!customerData.city) {
+      newErrors.city = "La ville est requise";
+    }
+    
+    if (!customerData.address.trim()) {
+      newErrors.address = "L'adresse est requise";
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   // Gérer la sélection d'un produit
   const handleSelectProduct = (product) => {
     setSelectedProduct(product);
@@ -225,7 +274,7 @@ const FootballJerseysShop = () => {
   // Ouvrir le formulaire de commande
   const handleOpenOrderForm = () => {
     if (!selectedProduct || !selectedSize) {
-      alert("Veuillez sélectionner une taille");
+      showNotification("Veuillez sélectionner une taille", "error");
       return;
     }
     setShowProductModal(false);
@@ -248,36 +297,96 @@ const FootballJerseysShop = () => {
       ...prev,
       [name]: value
     }));
+    
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: undefined }));
+    }
   };
 
-  // Soumettre la commande
-  const handleSubmitOrder = (e) => {
+  // Soumettre la commande à l'API
+  const handleSubmitOrder = async (e) => {
     e.preventDefault();
-    setIsProcessing(true);
-
-    // Simulation d'envoi
-    setTimeout(() => {
-      setIsProcessing(false);
-      setOrderConfirmed(true);
-
-      // Réinitialiser après 5 secondes
-      setTimeout(() => {
-        setOrderConfirmed(false);
-        setShowOrderForm(false);
-        setSelectedProduct(null);
-        setSelectedSize(null);
-        setQuantity(1);
-        setCustomerData({
-          fullName: "",
-          phone: "",
-          email: "",
-          city: "",
-          address: "",
-          notes: "",
-          paymentMethod: "cash"
-        });
-      }, 5000);
-    }, 2000);
+    
+    if (!validateForm()) {
+      showNotification("Veuillez corriger les erreurs dans le formulaire", "error");
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      const orderData = {
+        nom_complet: customerData.fullName.trim(),
+        telephone: customerData.phone.trim(),
+        email: customerData.email.trim() || null,
+        ville: customerData.city,
+        adresse_complete: customerData.address.trim(),
+        produit_id: selectedProduct.id,
+        nom_produit: `${selectedProduct.country} - ${selectedProduct.name}`,
+        prix_unitaire: selectedProduct.priceMAD,
+        quantite: quantity,
+        taille: selectedSize,
+        sous_total: calculateTotal().subtotal,
+        frais_livraison: DELIVERY_FEE,
+        total: calculateTotal().total,
+        statut: "en_attente",
+        methode_paiement: customerData.paymentMethod === "cash" ? "livraison" : "virement",
+        promotion_appliquee: isPromotionActive,
+        montant_promotion: isPromotionActive ? (NORMAL_PRICE - PROMOTION_PRICE) * quantity : 0,
+        prix_original: isPromotionActive ? NORMAL_PRICE : selectedProduct.priceMAD,
+        notes: customerData.notes.trim() || null
+      };
+      
+      console.log("Envoi de la commande:", orderData);
+      
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(orderData)
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || "Erreur lors de l'envoi de la commande");
+      }
+      
+      if (data.success) {
+        setOrderNumber(data.data.numero_commande);
+        setIsSubmitting(false);
+        setOrderConfirmed(true);
+        
+        showNotification("Commande confirmée avec succès !", "success");
+        
+        // Réinitialiser après 8 secondes
+        setTimeout(() => {
+          setOrderConfirmed(false);
+          setShowOrderForm(false);
+          setSelectedProduct(null);
+          setSelectedSize(null);
+          setQuantity(1);
+          setCustomerData({
+            fullName: "",
+            phone: "",
+            email: "",
+            city: "",
+            address: "",
+            notes: "",
+            paymentMethod: "cash"
+          });
+          setErrors({});
+        }, 8000);
+      } else {
+        throw new Error(data.message);
+      }
+      
+    } catch (error) {
+      console.error("Erreur lors de la commande:", error);
+      setIsSubmitting(false);
+      showNotification(error.message || "Erreur lors de l'envoi de la commande", "error");
+    }
   };
 
   // Filtrer les produits
@@ -291,93 +400,77 @@ const FootballJerseysShop = () => {
     return true;
   });
 
-  // Styles CSS complets
-  const pageStyles = `
-    /* Variables globales */
-    :root {
-      --color-primary: #000000;
-      --color-primary-light: #1a1a1a;
-      --color-accent: #F59E0B;
-      --color-accent-dark: #D97706;
-      --color-promotion: #EF4444;
-      --color-promotion-light: #FEE2E2;
-      --color-promotion-dark: #DC2626;
-      --color-white: #ffffff;
-      --color-gray-50: #f9fafb;
-      --color-gray-100: #f3f4f6;
-      --color-gray-200: #e5e7eb;
-      --color-gray-300: #d1d5db;
-      --color-gray-400: #9ca3af;
-      --color-gray-500: #6b7280;
-      --color-gray-600: #4b5563;
-      --color-gray-700: #374151;
-      --color-gray-800: #1f2937;
-      --color-gray-900: #111827;
-      --color-success: #10b981;
-      --color-success-dark: #059669;
-      --color-error: #ef4444;
-      --color-info: #3b82f6;
-      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-      --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-      --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-      --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-      --shadow-gold: 0 0 20px rgba(245, 158, 11, 0.3);
-      --shadow-promo: 0 0 20px rgba(239, 68, 68, 0.3);
-      --radius-sm: 4px;
-      --radius: 8px;
-      --radius-md: 12px;
-      --radius-lg: 16px;
-      --radius-xl: 24px;
-      --radius-2xl: 32px;
-      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
+  // Composant de notification
+  const Notification = () => {
+    if (!notification.show) return null;
+    
+    const bgColor = notification.type === "success" ? "bg-green-100 border-green-400 text-green-700" :
+                    notification.type === "error" ? "bg-red-100 border-red-400 text-red-700" :
+                    "bg-blue-100 border-blue-400 text-blue-700";
+    
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: -50 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -50 }}
+        className={`fixed top-4 right-4 z-50 p-4 rounded-lg border ${bgColor} shadow-lg max-w-md`}
+      >
+        <div className="flex items-center gap-3">
+          {notification.type === "success" ? (
+            <CheckCircle className="text-green-600" size={24} />
+          ) : notification.type === "error" ? (
+            <AlertCircle className="text-red-600" size={24} />
+          ) : (
+            <Info className="text-blue-600" size={24} />
+          )}
+          <div className="flex-1">
+            <p className="font-medium">{notification.message}</p>
+          </div>
+          <button
+            onClick={() => setNotification({ show: false, message: "", type: "success" })}
+            className="ml-4 text-gray-500 hover:text-gray-700"
+          >
+            <X size={20} />
+          </button>
+        </div>
+      </motion.div>
+    );
+  };
 
-    /* Reset et styles de base */
+  // Styles CSS
+  const styles = `
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
 
-    html, body {
-      width: 100%;
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+      color: #111827;
       overflow-x: hidden;
     }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-      background-color: var(--color-gray-50);
-      color: var(--color-gray-900);
-      line-height: 1.5;
-    }
-
-    /* Conteneur principal full width */
     .page-container {
-      width: 100vw;
+      width: 100%;
       min-height: 100vh;
       position: relative;
-      left: 50%;
-      right: 50%;
-      margin-left: -50vw;
-      margin-right: -50vw;
-      background: linear-gradient(135deg, var(--color-gray-50) 0%, var(--color-white) 100%);
-      overflow-x: hidden;
     }
 
     /* Header */
     .main-header {
       position: sticky;
       top: 0;
-      z-index: 1000;
-      background: var(--color-white);
-      border-bottom: 1px solid var(--color-gray-200);
+      z-index: 100;
+      background: white;
+      border-bottom: 1px solid #e5e7eb;
       padding: 1rem 0;
       width: 100%;
     }
 
     .header-wrapper {
-      max-width: 100%;
+      max-width: 1280px;
       margin: 0 auto;
       padding: 0 1rem;
       display: flex;
@@ -390,15 +483,15 @@ const FootballJerseysShop = () => {
       align-items: center;
       gap: 0.75rem;
       text-decoration: none;
-      color: var(--color-primary);
+      color: #000000;
     }
 
     .logo-symbol {
       width: 40px;
       height: 40px;
-      background: var(--color-primary);
-      color: var(--color-white);
-      border-radius: var(--radius-lg);
+      background: #000000;
+      color: white;
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -410,13 +503,7 @@ const FootballJerseysShop = () => {
     }
 
     .logo-highlight {
-      color: var(--color-accent);
-    }
-
-    .header-tools {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
+      color: #F59E0B;
     }
 
     .search-container {
@@ -432,11 +519,11 @@ const FootballJerseysShop = () => {
 
     .search-field {
       padding: 0.75rem 1rem 0.75rem 3rem;
-      border: 2px solid var(--color-gray-300);
-      border-radius: var(--radius-lg);
+      border: 2px solid #d1d5db;
+      border-radius: 12px;
       width: 300px;
       font-size: 0.875rem;
-      background: var(--color-white);
+      background: white;
     }
 
     .search-icon {
@@ -444,7 +531,7 @@ const FootballJerseysShop = () => {
       left: 1rem;
       top: 50%;
       transform: translateY(-50%);
-      color: var(--color-gray-500);
+      color: #6b7280;
     }
 
     .header-buttons {
@@ -458,26 +545,26 @@ const FootballJerseysShop = () => {
       display: flex;
       align-items: center;
       justify-content: center;
-      background: var(--color-gray-100);
+      background: #f3f4f6;
       border: none;
-      border-radius: var(--radius-lg);
-      color: var(--color-gray-700);
+      border-radius: 12px;
+      color: #374151;
       cursor: pointer;
-      transition: var(--transition);
+      transition: all 0.3s ease;
       position: relative;
     }
 
     .icon-button:hover {
-      background: var(--color-gray-200);
-      color: var(--color-gray-900);
+      background: #e5e7eb;
+      color: #111827;
     }
 
     .badge-count {
       position: absolute;
       top: -5px;
       right: -5px;
-      background: var(--color-accent);
-      color: var(--color-white);
+      background: #F59E0B;
+      color: white;
       font-size: 0.75rem;
       font-weight: 700;
       width: 20px;
@@ -488,39 +575,17 @@ const FootballJerseysShop = () => {
       justify-content: center;
     }
 
-    .menu-toggle {
-      display: block;
-    }
-
-    @media (min-width: 768px) {
-      .menu-toggle {
-        display: none;
-      }
-    }
-
     /* Bannière promotion */
     .promotion-banner {
-      background: linear-gradient(135deg, var(--color-promotion), var(--color-promotion-dark));
-      color: var(--color-white);
-      border-radius: var(--radius-xl);
+      background: linear-gradient(135deg, #EF4444, #DC2626);
+      color: white;
+      border-radius: 24px;
       padding: 1.5rem;
       margin: 1rem 1rem 2rem 1rem;
       position: relative;
       overflow: hidden;
-      box-shadow: var(--shadow-lg);
-      border: 2px solid var(--color-promotion);
-      animation: slideInDown 0.5s ease;
-    }
-
-    @keyframes slideInDown {
-      from {
-        opacity: 0;
-        transform: translateY(-20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+      border: 2px solid #EF4444;
     }
 
     .promotion-content {
@@ -549,30 +614,22 @@ const FootballJerseysShop = () => {
     .promotion-countdown {
       background: rgba(255, 255, 255, 0.15);
       padding: 0.75rem 1.5rem;
-      border-radius: var(--radius-lg);
+      border-radius: 12px;
       backdrop-filter: blur(10px);
       border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-
-    .countdown-timer {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-weight: 700;
-      font-size: 1.125rem;
     }
 
     .promotion-badge {
       position: absolute;
       top: -10px;
       right: 20px;
-      background: var(--color-white);
-      color: var(--color-promotion);
+      background: white;
+      color: #EF4444;
       padding: 0.5rem 1rem;
       font-size: 0.75rem;
       font-weight: 800;
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow);
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
       z-index: 3;
       transform: rotate(5deg);
       animation: pulse 2s infinite;
@@ -586,26 +643,12 @@ const FootballJerseysShop = () => {
       50% { transform: rotate(5deg) scale(1.05); }
     }
 
-    .price-highlight {
-      background: linear-gradient(135deg, var(--color-accent), var(--color-accent-dark));
-      color: var(--color-white);
-      padding: 0.75rem 1.5rem;
-      border-radius: var(--radius-lg);
-      font-weight: 800;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.75rem;
-      margin-top: 1rem;
-      box-shadow: var(--shadow);
-      border: 2px solid var(--color-accent-dark);
-    }
-
     /* Bannière hero */
     .hero-banner {
       width: calc(100% - 2rem);
-      background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
-      color: var(--color-white);
-      border-radius: var(--radius-2xl);
+      background: linear-gradient(135deg, #000000, #1a1a1a);
+      color: white;
+      border-radius: 32px;
       padding: 3rem 2rem;
       margin: 0 1rem 2rem 1rem;
       position: relative;
@@ -627,38 +670,16 @@ const FootballJerseysShop = () => {
 
     .hero-description {
       font-size: 1.125rem;
-      color: var(--color-gray-300);
+      color: #d1d5db;
       margin-bottom: 2rem;
       line-height: 1.6;
-    }
-
-    .stats-grid {
-      display: flex;
-      gap: 2rem;
-      margin-top: 2rem;
-      flex-wrap: wrap;
-    }
-
-    .stat-box {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .stat-value {
-      font-size: 1.5rem;
-      font-weight: 800;
-      color: var(--color-accent);
-    }
-
-    .stat-label {
-      font-size: 0.875rem;
-      color: var(--color-gray-400);
     }
 
     /* Section principale */
     .main-content {
       width: 100%;
+      max-width: 1280px;
+      margin: 0 auto;
       padding: 0 1rem;
     }
 
@@ -667,34 +688,12 @@ const FootballJerseysShop = () => {
       margin-bottom: 3rem;
     }
 
-    .section-tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.75rem 1.5rem;
-      background: var(--color-primary);
-      color: var(--color-white);
-      font-size: 0.875rem;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-      border-radius: var(--radius-2xl);
-      margin-bottom: 1.5rem;
-    }
-
     .section-heading {
       font-size: clamp(2rem, 4vw, 3rem);
       font-weight: 900;
       line-height: 1.1;
-      color: var(--color-gray-900);
+      color: #111827;
       margin-bottom: 1rem;
-    }
-
-    .section-subheading {
-      font-size: 1.125rem;
-      color: var(--color-gray-600);
-      max-width: 600px;
-      margin: 0 auto;
-      line-height: 1.6;
     }
 
     /* Filtres */
@@ -704,32 +703,32 @@ const FootballJerseysShop = () => {
       gap: 0.75rem;
       margin-bottom: 2rem;
       padding: 1.5rem;
-      background: var(--color-white);
-      border-radius: var(--radius-xl);
-      box-shadow: var(--shadow);
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
       width: 100%;
     }
 
     .filter-tab {
       padding: 0.75rem 1.5rem;
-      border: 2px solid var(--color-gray-300);
-      background: var(--color-white);
-      color: var(--color-gray-700);
+      border: 2px solid #d1d5db;
+      background: white;
+      color: #374151;
       font-weight: 600;
-      border-radius: var(--radius-lg);
+      border-radius: 12px;
       cursor: pointer;
-      transition: var(--transition);
+      transition: all 0.3s ease;
     }
 
     .filter-tab:hover {
-      border-color: var(--color-gray-400);
-      background: var(--color-gray-50);
+      border-color: #9ca3af;
+      background: #f9fafb;
     }
 
     .filter-tab.active {
-      background: var(--color-primary);
-      color: var(--color-white);
-      border-color: var(--color-primary);
+      background: #000000;
+      color: white;
+      border-color: #000000;
     }
 
     /* Grille de produits */
@@ -749,32 +748,32 @@ const FootballJerseysShop = () => {
 
     /* Carte produit */
     .product-card {
-      background: var(--color-white);
-      border-radius: var(--radius-xl);
+      background: white;
+      border-radius: 24px;
       overflow: hidden;
-      box-shadow: var(--shadow);
-      border: 2px solid var(--color-gray-200);
-      transition: var(--transition);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      border: 2px solid #e5e7eb;
+      transition: all 0.3s ease;
       position: relative;
       width: 100%;
     }
 
     .product-card:hover {
       transform: translateY(-8px);
-      box-shadow: var(--shadow-lg);
-      border-color: var(--color-accent);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+      border-color: #F59E0B;
     }
 
     .product-badge {
       position: absolute;
       top: 1rem;
       left: 1rem;
-      background: var(--color-accent);
-      color: var(--color-white);
+      background: #F59E0B;
+      color: white;
       padding: 0.5rem 1rem;
       font-size: 0.75rem;
       font-weight: 700;
-      border-radius: var(--radius);
+      border-radius: 8px;
       z-index: 2;
       display: flex;
       align-items: center;
@@ -782,7 +781,7 @@ const FootballJerseysShop = () => {
     }
 
     .product-badge.promo-badge {
-      background: var(--color-promotion);
+      background: #EF4444;
       left: auto;
       right: 1rem;
       animation: pulse 2s infinite;
@@ -794,7 +793,7 @@ const FootballJerseysShop = () => {
       right: 1rem;
       width: 40px;
       height: 40px;
-      background: var(--color-white);
+      background: white;
       border: none;
       border-radius: 50%;
       display: flex;
@@ -802,18 +801,18 @@ const FootballJerseysShop = () => {
       justify-content: center;
       cursor: pointer;
       z-index: 2;
-      transition: var(--transition);
-      box-shadow: var(--shadow);
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
 
     .favorite-toggle:hover {
-      background: var(--color-gray-100);
+      background: #f3f4f6;
       transform: scale(1.1);
     }
 
     .favorite-toggle.active {
-      background: var(--color-error);
-      color: var(--color-white);
+      background: #ef4444;
+      color: white;
     }
 
     .product-image-container {
@@ -834,91 +833,21 @@ const FootballJerseysShop = () => {
       transform: scale(1.05);
     }
 
-    .image-overlay {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
-      padding: 1rem;
-      color: var(--color-white);
-    }
-
-    .product-country {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-weight: 700;
-      font-size: 1.125rem;
-    }
-
     .product-details {
       padding: 1.5rem;
       width: 100%;
     }
 
     .product-name {
-      color: var(--color-gray-600);
+      color: #4b5563;
       font-size: 0.875rem;
       margin-bottom: 1rem;
-    }
-
-    .price-row {
-      display: flex;
-      align-items: baseline;
-      gap: 0.75rem;
-      margin-bottom: 1rem;
-      flex-direction: column;
-      align-items: flex-start;
     }
 
     .price-mad {
       font-size: 1.5rem;
       font-weight: 800;
-      color: var(--color-gray-900);
-    }
-
-    .promotion-price {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      margin-top: 0.25rem;
-    }
-
-    .old-price {
-      text-decoration: line-through;
-      color: var(--color-gray-500);
-      font-size: 0.875rem;
-    }
-
-    .savings-badge {
-      background: var(--color-promotion-light);
-      color: var(--color-promotion);
-      padding: 0.25rem 0.5rem;
-      border-radius: var(--radius);
-      font-size: 0.75rem;
-      font-weight: 700;
-      border: 1px solid var(--color-promotion);
-    }
-
-    .features-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .feature-line {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.875rem;
-      color: var(--color-gray-700);
-    }
-
-    .feature-line svg {
-      color: var(--color-success);
-      flex-shrink: 0;
+      color: #111827;
     }
 
     .action-buttons {
@@ -930,13 +859,13 @@ const FootballJerseysShop = () => {
     .primary-action {
       flex: 1;
       padding: 0.875rem;
-      background: var(--color-primary);
-      color: var(--color-white);
+      background: #000000;
+      color: white;
       border: none;
-      border-radius: var(--radius-lg);
+      border-radius: 12px;
       font-weight: 700;
       cursor: pointer;
-      transition: var(--transition);
+      transition: all 0.3s ease;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -944,42 +873,16 @@ const FootballJerseysShop = () => {
     }
 
     .primary-action:hover {
-      background: var(--color-primary-light);
+      background: #1a1a1a;
       transform: translateY(-2px);
     }
 
     .primary-action.promo-action {
-      background: linear-gradient(135deg, var(--color-promotion), var(--color-promotion-dark));
-      box-shadow: var(--shadow-promo);
+      background: linear-gradient(135deg, #EF4444, #DC2626);
     }
 
-    .primary-action.promo-action:hover {
-      background: linear-gradient(135deg, var(--color-promotion-dark), var(--color-promotion));
-      transform: translateY(-2px);
-      box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);
-    }
-
-    .secondary-action {
-      width: 44px;
-      height: 44px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: var(--color-gray-100);
-      border: none;
-      border-radius: var(--radius-lg);
-      color: var(--color-gray-700);
-      cursor: pointer;
-      transition: var(--transition);
-    }
-
-    .secondary-action:hover {
-      background: var(--color-gray-200);
-      color: var(--color-gray-900);
-    }
-
-    /* Modal produit */
-    .product-modal-overlay {
+    /* Modal */
+    .modal-overlay {
       position: fixed;
       top: 0;
       left: 0;
@@ -990,326 +893,20 @@ const FootballJerseysShop = () => {
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 2000;
+      z-index: 1000;
       padding: 1rem;
       width: 100vw;
-      animation: fadeIn 0.3s ease;
+      height: 100vh;
     }
 
-    .product-modal {
+    .modal-container {
       width: 100%;
       max-width: 800px;
       max-height: 90vh;
-      background: var(--color-white);
-      border-radius: var(--radius-2xl);
+      background: white;
+      border-radius: 24px;
       overflow: hidden;
-      box-shadow: var(--shadow-xl);
-      animation: slideUp 0.3s ease;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .product-modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 1.5rem 2rem;
-      background: var(--color-gray-900);
-      color: var(--color-white);
-    }
-
-    .product-modal-body {
-      padding: 2rem;
-      overflow-y: auto;
-      flex: 1;
-    }
-
-    .product-modal-content {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 3rem;
-    }
-
-    @media (max-width: 768px) {
-      .product-modal-content {
-        grid-template-columns: 1fr;
-        gap: 2rem;
-      }
-    }
-
-    .product-modal-image {
-      width: 100%;
-      height: 350px;
-      object-fit: cover;
-      border-radius: var(--radius-xl);
-      box-shadow: var(--shadow);
-    }
-
-    .product-modal-info {
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-    }
-
-    .product-modal-title {
-      font-size: 2rem;
-      font-weight: 800;
-      color: var(--color-gray-900);
-      line-height: 1.2;
-    }
-
-    .product-modal-price {
-      font-size: 2.5rem;
-      font-weight: 800;
-      color: var(--color-accent);
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-
-    .price-after-promotion {
-      font-size: 1.5rem;
-      color: var(--color-gray-500);
-      text-decoration: line-through;
-    }
-
-    .product-modal-rating {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin-top: 0.5rem;
-    }
-
-    /* Sélection taille dans modal */
-    .modal-size-selection {
-      margin-top: 1.5rem;
-      width: 100%;
-    }
-
-    .modal-size-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1.5rem;
-    }
-
-    .modal-size-guide-link {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.5rem 1rem;
-      background: var(--color-gray-100);
-      border: 2px solid var(--color-gray-300);
-      border-radius: var(--radius-lg);
-      color: var(--color-gray-700);
-      font-size: 0.875rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: var(--transition);
-    }
-
-    .modal-size-guide-link:hover {
-      background: var(--color-gray-200);
-      border-color: var(--color-gray-400);
-    }
-
-    .modal-sizes-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-      gap: 1rem;
-    }
-
-    .modal-size-option {
-      padding: 1.25rem 1rem;
-      background: var(--color-gray-100);
-      border: 2px solid var(--color-gray-300);
-      border-radius: var(--radius-lg);
-      text-align: center;
-      cursor: pointer;
-      transition: var(--transition);
-    }
-
-    .modal-size-option:hover {
-      border-color: var(--color-gray-400);
-      background: var(--color-gray-200);
-    }
-
-    .modal-size-option.selected {
-      background: var(--color-accent);
-      border-color: var(--color-accent);
-      color: var(--color-white);
-    }
-
-    .modal-size-text {
-      font-size: 1.125rem;
-      font-weight: 800;
-    }
-
-    /* Sélection quantité dans modal */
-    .modal-quantity-selector {
-      margin-top: 1.5rem;
-      width: 100%;
-    }
-
-    .modal-quantity-controls {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-
-    .modal-quantity-button {
-      width: 48px;
-      height: 48px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: var(--color-gray-100);
-      border: 2px solid var(--color-gray-300);
-      border-radius: var(--radius-lg);
-      font-size: 1.5rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: var(--transition);
-    }
-
-    .modal-quantity-button:hover {
-      background: var(--color-gray-200);
-      border-color: var(--color-gray-400);
-    }
-
-    .modal-quantity-display {
-      min-width: 60px;
-      text-align: center;
-      font-size: 1.5rem;
-      font-weight: 800;
-      color: var(--color-gray-900);
-    }
-
-    .modal-stock-info {
-      margin-left: auto;
-      padding: 0.75rem 1rem;
-      background: var(--color-gray-100);
-      border-radius: var(--radius-lg);
-      color: var(--color-gray-700);
-      font-size: 0.875rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    /* Récapitulatif dans modal */
-    .modal-order-summary {
-      background: var(--color-white);
-      border-radius: var(--radius-xl);
-      padding: 1.5rem;
-      box-shadow: var(--shadow);
-      margin-top: 2rem;
-      width: 100%;
-      border: 2px solid var(--color-gray-200);
-    }
-
-    .modal-summary-line {
-      display: flex;
-      justify-content: space-between;
-      padding: 0.75rem 0;
-      border-bottom: 1px solid var(--color-gray-200);
-    }
-
-    .modal-summary-total {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 1rem 0;
-      font-size: 1.25rem;
-      font-weight: 800;
-      color: var(--color-gray-900);
-    }
-
-    .modal-checkout-button {
-      width: 100%;
-      padding: 1rem;
-      background: linear-gradient(135deg, var(--color-accent), var(--color-accent-dark));
-      color: var(--color-white);
-      border: none;
-      border-radius: var(--radius-lg);
-      font-size: 1rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: var(--transition);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.75rem;
-      margin-top: 1rem;
-    }
-
-    .modal-checkout-button:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-gold);
-    }
-
-    .modal-checkout-button.promo-button {
-      background: linear-gradient(135deg, var(--color-promotion), var(--color-promotion-dark));
-      box-shadow: var(--shadow-promo);
-    }
-
-    .modal-checkout-button.promo-button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);
-    }
-
-    .modal-checkout-button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    /* Modal formulaire */
-    .form-modal-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.8);
-      backdrop-filter: blur(10px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 2001;
-      padding: 1rem;
-      width: 100vw;
-      animation: fadeIn 0.3s ease;
-    }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-      }
-      to {
-        opacity: 1;
-      }
-    }
-
-    .form-modal {
-      width: 100%;
-      max-width: 600px;
-      max-height: 90vh;
-      background: var(--color-white);
-      border-radius: var(--radius-2xl);
-      overflow: hidden;
-      box-shadow: var(--shadow-xl);
-      animation: slideUp 0.3s ease;
-    }
-
-    @keyframes slideUp {
-      from {
-        opacity: 0;
-        transform: translateY(50px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     }
 
     .modal-header {
@@ -1317,40 +914,36 @@ const FootballJerseysShop = () => {
       justify-content: space-between;
       align-items: center;
       padding: 1.5rem 2rem;
-      background: var(--color-gray-900);
-      color: var(--color-white);
-    }
-
-    .modal-title {
-      font-size: 1.5rem;
-      font-weight: 800;
-    }
-
-    .close-modal {
-      width: 40px;
-      height: 40px;
-      background: rgba(255, 255, 255, 0.1);
-      border: none;
-      border-radius: 50%;
-      color: var(--color-white);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: var(--transition);
-    }
-
-    .close-modal:hover {
-      background: rgba(255, 255, 255, 0.2);
-      transform: rotate(90deg);
+      background: #111827;
+      color: white;
     }
 
     .modal-body {
       padding: 2rem;
       overflow-y: auto;
-      max-height: 60vh;
+      max-height: 70vh;
     }
 
+    .close-button {
+      width: 40px;
+      height: 40px;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      border-radius: 50%;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+    }
+
+    .close-button:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: rotate(90deg);
+    }
+
+    /* Formulaire */
     .form-group {
       margin-bottom: 1.5rem;
       width: 100%;
@@ -1360,115 +953,73 @@ const FootballJerseysShop = () => {
       display: block;
       margin-bottom: 0.5rem;
       font-weight: 600;
-      color: var(--color-gray-700);
+      color: #374151;
       display: flex;
       align-items: center;
       gap: 0.5rem;
     }
 
-    .form-control {
+    .form-input {
       width: 100%;
       padding: 1rem;
-      border: 2px solid var(--color-gray-300);
-      border-radius: var(--radius-lg);
+      border: 2px solid #d1d5db;
+      border-radius: 12px;
       font-size: 1rem;
-      transition: var(--transition);
+      transition: all 0.3s ease;
     }
 
-    .form-control:focus {
+    .form-input:focus {
       outline: none;
-      border-color: var(--color-accent);
+      border-color: #F59E0B;
       box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
     }
 
-    .form-textarea {
-      font-family: inherit;
-      resize: vertical;
-      min-height: 100px;
-    }
-
-    .payment-options {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 1rem;
-      margin-top: 1rem;
-    }
-
-    .payment-choice {
+    .error {
+      color: #ef4444;
+      font-size: 0.875rem;
+      margin-top: 0.25rem;
       display: flex;
       align-items: center;
-      gap: 0.75rem;
-      padding: 1rem;
-      border: 2px solid var(--color-gray-300);
-      border-radius: var(--radius-lg);
-      cursor: pointer;
-      transition: var(--transition);
+      gap: 0.5rem;
     }
 
-    .payment-choice.selected {
-      border-color: var(--color-accent);
-      background: rgba(245, 158, 11, 0.05);
-    }
-
-    .submit-order {
+    .submit-button {
       width: 100%;
       padding: 1.25rem;
-      background: linear-gradient(135deg, var(--color-success-dark), var(--color-success));
-      color: var(--color-white);
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
       border: none;
-      border-radius: var(--radius-lg);
+      border-radius: 12px;
       font-size: 1.125rem;
       font-weight: 700;
       cursor: pointer;
-      transition: var(--transition);
+      transition: all 0.3s ease;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 1rem;
     }
 
-    .submit-order.promo-submit {
-      background: linear-gradient(135deg, var(--color-promotion), var(--color-promotion-dark));
-    }
-
-    .submit-order:hover:not(:disabled) {
+    .submit-button:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow: 0 10px 20px rgba(16, 185, 129, 0.2);
     }
 
-    .submit-order.promo-submit:hover:not(:disabled) {
-      box-shadow: 0 10px 20px rgba(239, 68, 68, 0.2);
-    }
-
-    .submit-order:disabled {
+    .submit-button:disabled {
       opacity: 0.5;
       cursor: not-allowed;
     }
 
-    .loading-spinner {
-      width: 20px;
-      height: 20px;
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      border-top-color: var(--color-white);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    /* Message succès */
-    .success-view {
+    /* Succès */
+    .success-container {
       text-align: center;
       padding: 4rem 2rem;
     }
 
-    .success-icon-wrapper {
+    .success-icon {
       width: 80px;
       height: 80px;
-      background: var(--color-success);
-      color: var(--color-white);
+      background: #10b981;
+      color: white;
       border-radius: 50%;
       display: flex;
       align-items: center;
@@ -1479,26 +1030,33 @@ const FootballJerseysShop = () => {
     .success-title {
       font-size: 2rem;
       font-weight: 800;
-      color: var(--color-gray-900);
+      color: #111827;
       margin-bottom: 1rem;
     }
 
-    .success-message {
-      color: var(--color-gray-600);
-      margin-bottom: 2rem;
-      line-height: 1.6;
+    .order-number-display {
+      background: #f3f4f6;
+      border: 2px solid #d1d5db;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 2rem 0;
+      font-family: monospace;
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #000000;
+      letter-spacing: 1px;
     }
 
-    /* Section avantages */
+    /* Avantages */
     .advantages-section {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
       gap: 2rem;
       margin: 4rem 0;
       padding: 2rem;
-      background: var(--color-white);
-      border-radius: var(--radius-2xl);
-      box-shadow: var(--shadow);
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
       width: 100%;
     }
 
@@ -1508,53 +1066,28 @@ const FootballJerseysShop = () => {
       align-items: center;
       text-align: center;
       padding: 2rem;
-      background: var(--color-gray-50);
-      border-radius: var(--radius-xl);
-      transition: var(--transition);
+      background: #f9fafb;
+      border-radius: 20px;
+      transition: all 0.3s ease;
     }
 
     .advantage-card:hover {
       transform: translateY(-5px);
-      background: var(--color-white);
-      box-shadow: var(--shadow-md);
-    }
-
-    .advantage-icon {
-      width: 60px;
-      height: 60px;
-      background: var(--color-accent);
-      color: var(--color-white);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 1.5rem;
-    }
-
-    .advantage-title {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: var(--color-gray-900);
-      margin-bottom: 0.75rem;
-    }
-
-    .advantage-description {
-      color: var(--color-gray-600);
-      line-height: 1.6;
+      background: white;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
     }
 
     /* Menu mobile */
-    .mobile-menu-overlay {
+    .mobile-menu {
       position: fixed;
       top: 0;
       left: 0;
       right: 0;
       bottom: 0;
-      background: var(--color-white);
+      background: white;
       z-index: 1001;
       padding: 2rem;
       overflow-y: auto;
-      animation: fadeIn 0.3s ease;
     }
 
     .mobile-menu-header {
@@ -1570,22 +1103,18 @@ const FootballJerseysShop = () => {
       gap: 1.5rem;
     }
 
-    .mobile-nav-link {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      padding: 1rem;
-      background: var(--color-gray-50);
-      border-radius: var(--radius-lg);
-      text-decoration: none;
-      color: var(--color-gray-900);
-      font-weight: 600;
+    /* Loader */
+    .loader {
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
     }
 
-    .mobile-nav-link.promo-link {
-      background: var(--color-promotion-light);
-      color: var(--color-promotion);
-      border: 2px solid var(--color-promotion);
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
 
     /* Responsive */
@@ -1596,136 +1125,61 @@ const FootballJerseysShop = () => {
       }
       
       .promotion-banner {
-        margin: 1rem 1rem 1rem 1rem;
+        margin: 1rem;
         padding: 1rem;
-      }
-      
-      .promotion-content {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-      
-      .promotion-countdown {
-        width: 100%;
-      }
-      
-      .stats-grid {
-        flex-direction: column;
-        gap: 1rem;
       }
       
       .filters-row {
         flex-direction: column;
       }
       
+      .modal-header {
+        padding: 1rem;
+      }
+      
       .modal-body {
         padding: 1rem;
       }
-      
-      .product-modal-body {
-        padding: 1rem;
-      }
-      
-      .product-modal-header {
-        padding: 1rem;
-      }
-      
-      .payment-options {
-        grid-template-columns: 1fr;
-      }
-      
-      .modal-sizes-container {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-
-    /* Scrollbar personnalisée */
-    ::-webkit-scrollbar {
-      width: 8px;
-    }
-
-    ::-webkit-scrollbar-track {
-      background: var(--color-gray-100);
-      border-radius: 4px;
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: var(--color-gray-400);
-      border-radius: 4px;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-      background: var(--color-gray-500);
-    }
-
-    /* Animations supplémentaires */
-    @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-10px); }
-    }
-
-    .floating {
-      animation: float 3s ease-in-out infinite;
     }
   `;
 
   return (
     <>
-      <style>{pageStyles}</style>
+      <style>{styles}</style>
+      
+      {/* Notification */}
+      <Notification />
       
       <div className="page-container">
         {/* Header */}
         <header className="main-header">
           <div className="header-wrapper">
-            <a href="#" className="brand-logo">
+            <div className="brand-logo">
               <div className="logo-symbol">
                 <ShoppingBag size={24} />
               </div>
               <div className="logo-text">
                 Maillots<span className="logo-highlight">Pro</span>
               </div>
-            </a>
+            </div>
             
-            <div className="header-tools">
-              <div className="search-container">
-                <input
-                  type="text"
-                  placeholder="Rechercher..."
-                  className="search-field"
-                  value={searchText}
-                  onChange={(e) => setSearchText(e.target.value)}
-                />
-                <Search size={20} className="search-icon" />
-              </div>
+            <div className="header-buttons">
+              <button 
+                className="icon-button"
+                onClick={() => toggleFavorite(selectedProduct?.id)}
+              >
+                <Heart size={20} />
+                {favoriteItems.length > 0 && (
+                  <span className="badge-count">{favoriteItems.length}</span>
+                )}
+              </button>
               
-              <div className="header-buttons">
-                <button 
-                  className="icon-button"
-                  onClick={() => toggleFavorite(selectedProduct?.id)}
-                >
-                  <Heart size={20} />
-                  {favoriteItems.length > 0 && (
-                    <span className="badge-count">{favoriteItems.length}</span>
-                  )}
-                </button>
-                
-                <button 
-                  className="icon-button"
-                  onClick={() => setShowCartPanel(!showCartPanel)}
-                >
-                  <ShoppingCart size={20} />
-                  {cartItems.length > 0 && (
-                    <span className="badge-count">{cartItems.length}</span>
-                  )}
-                </button>
-                
-                <button 
-                  className="icon-button menu-toggle"
-                  onClick={() => setShowMobileNav(!showMobileNav)}
-                >
-                  <Menu size={20} />
-                </button>
-              </div>
+              <button 
+                className="icon-button menu-toggle"
+                onClick={() => setShowMobileNav(!showMobileNav)}
+              >
+                <Menu size={20} />
+              </button>
             </div>
           </div>
         </header>
@@ -1748,7 +1202,7 @@ const FootballJerseysShop = () => {
                   PROMOTION SPÉCIALE
                 </h3>
                 <p style={{ marginTop: '0.5rem', opacity: 0.9 }}>
-                  <strong>150 DH</strong> au lieu de <span className="old-price" style={{ color: 'rgba(255,255,255,0.8)' }}>180 DH</span> par maillot
+                  <strong>150 DH</strong> au lieu de <span style={{ textDecoration: 'line-through', color: 'rgba(255,255,255,0.8)' }}>180 DH</span> par maillot
                   <br />
                   Offre valable jusqu'au 22 décembre 2025
                 </p>
@@ -1769,7 +1223,7 @@ const FootballJerseysShop = () => {
             <h1 className="hero-title">
               Maillots Officiels Africains
               <br />
-              <span style={{ color: 'var(--color-accent)' }}>
+              <span style={{ color: '#F59E0B' }}>
                 {isPromotionActive ? 'À partir de 150 DH' : 'À partir de 180 DH'}
               </span>
             </h1>
@@ -1777,38 +1231,21 @@ const FootballJerseysShop = () => {
               Commandez votre maillot préféré des équipes nationales.
               Livraison express dans toutes les villes du Maroc.
               {isPromotionActive && (
-                <div className="price-highlight">
+                <div style={{ 
+                  background: 'linear-gradient(135deg, #F59E0B, #D97706)', 
+                  color: 'white', 
+                  padding: '0.75rem 1.5rem', 
+                  borderRadius: '12px',
+                  marginTop: '1rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.75rem'
+                }}>
                   <Tag size={16} />
                   PROMOTION EN COURS : 150 DH le maillot
                 </div>
               )}
             </p>
-            
-            <div className="stats-grid">
-              <div className="stat-box">
-                <CheckCircle size={20} color="var(--color-accent)" />
-                <div>
-                  <div className="stat-value">500+</div>
-                  <div className="stat-label">Clients satisfaits</div>
-                </div>
-              </div>
-              
-              <div className="stat-box">
-                <Truck size={20} color="var(--color-accent)" />
-                <div>
-                  <div className="stat-value">24h</div>
-                  <div className="stat-label">Livraison express</div>
-                </div>
-              </div>
-              
-              <div className="stat-box">
-                <Shield size={20} color="var(--color-accent)" />
-                <div>
-                  <div className="stat-value">100%</div>
-                  <div className="stat-label">Garantie qualité</div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -1816,7 +1253,18 @@ const FootballJerseysShop = () => {
         <main className="main-content">
           {/* En-tête section */}
           <div className="section-header">
-            <div className="section-tag">
+            <div style={{ 
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.75rem 1.5rem',
+              background: '#000000',
+              color: 'white',
+              fontSize: '0.875rem',
+              fontWeight: '700',
+              borderRadius: '32px',
+              marginBottom: '1.5rem'
+            }}>
               <Award size={20} />
               {isPromotionActive ? 'PROMOTION 2024' : 'COLLECTION 2024'}
             </div>
@@ -1825,7 +1273,13 @@ const FootballJerseysShop = () => {
               Nos Maillots Officiels
             </h2>
             
-            <p className="section-subheading">
+            <p style={{ 
+              fontSize: '1.125rem',
+              color: '#4b5563',
+              maxWidth: '600px',
+              margin: '0 auto',
+              lineHeight: '1.6'
+            }}>
               {isPromotionActive 
                 ? "Profitez de notre promotion spéciale ! Tous les maillots à 150 DH jusqu'au 22 décembre 2025."
                 : "Choisissez parmi notre collection exclusive. Tous les maillots à 180 DH."
@@ -1862,20 +1316,6 @@ const FootballJerseysShop = () => {
             >
               Sénégal
             </button>
-            
-            <button 
-              className={`filter-tab ${activeCategory === "new" ? "active" : ""}`}
-              onClick={() => setActiveCategory("new")}
-            >
-              Nouveautés
-            </button>
-            
-            <button 
-              className={`filter-tab ${activeCategory === "bestseller" ? "active" : ""}`}
-              onClick={() => setActiveCategory("bestseller")}
-            >
-              Bestsellers
-            </button>
           </div>
 
           {/* Grille de produits */}
@@ -1890,7 +1330,6 @@ const FootballJerseysShop = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
-                  whileHover={{ y: -5 }}
                 >
                   {product.labels.includes("Nouveau") && (
                     <div className="product-badge">NOUVEAU</div>
@@ -1918,38 +1357,38 @@ const FootballJerseysShop = () => {
                       alt={`${product.country} - ${product.name}`}
                       className="product-image"
                     />
-                    <div className="image-overlay">
-                      <div className="product-country">
-                        <span>{product.flag}</span>
-                        <span>{product.country}</span>
-                      </div>
-                    </div>
                   </div>
                   
                   <div className="product-details">
                     <p className="product-name">{product.name}</p>
                     
-                    <div className="price-row">
+                    <div style={{ marginBottom: '1rem' }}>
                       <span className="price-mad">
                         {formatPrice(product.priceMAD)}
                       </span>
                       {isPromotionActive && (
-                        <div className="promotion-price">
-                          <span className="old-price">180 DH</span>
-                          <span className="savings-badge">
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '0.75rem',
+                          marginTop: '0.25rem'
+                        }}>
+                          <span style={{ textDecoration: 'line-through', color: '#6b7280', fontSize: '0.875rem' }}>
+                            180 DH
+                          </span>
+                          <span style={{ 
+                            background: '#FEE2E2',
+                            color: '#EF4444',
+                            padding: '0.25rem 0.5rem',
+                            borderRadius: '4px',
+                            fontSize: '0.75rem',
+                            fontWeight: '700',
+                            border: '1px solid #EF4444'
+                          }}>
                             Économisez 30 DH
                           </span>
                         </div>
                       )}
-                    </div>
-                    
-                    <div className="features-list">
-                      {product.highlights.slice(0, 2).map((feature, index) => (
-                        <div key={index} className="feature-line">
-                          <Check size={14} />
-                          <span>{feature}</span>
-                        </div>
-                      ))}
                     </div>
                     
                     <div className="action-buttons">
@@ -1959,13 +1398,6 @@ const FootballJerseysShop = () => {
                       >
                         <ShoppingCart size={18} />
                         {isPromotionActive ? "Profiter de l'offre" : "Voir détails"}
-                      </button>
-                      
-                      <button 
-                        className="secondary-action"
-                        onClick={() => handleSelectProduct(product)}
-                      >
-                        <Eye size={18} />
                       </button>
                     </div>
                   </div>
@@ -2047,42 +1479,42 @@ const FootballJerseysShop = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="product-modal-overlay"
+              className="modal-overlay"
             >
               <motion.div
                 initial={{ scale: 0.9, y: 20 }}
                 animate={{ scale: 1, y: 0 }}
                 exit={{ scale: 0.9, y: 20 }}
-                className="product-modal"
+                className="modal-container"
               >
-                <div className="product-modal-header">
+                <div className="modal-header">
                   <div>
-                    <h2 className="modal-title">Configuration de votre commande</h2>
-                    <p style={{ color: 'var(--color-gray-300)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
+                    <h2 style={{ fontSize: '1.5rem', fontWeight: '800' }}>Configuration de votre commande</h2>
+                    <p style={{ color: '#d1d5db', fontSize: '0.875rem', marginTop: '0.25rem' }}>
                       {isPromotionActive 
                         ? "Profitez de notre promotion spéciale !" 
                         : "Sélectionnez la taille et la quantité"}
                     </p>
                   </div>
                   <button 
-                    className="close-modal"
+                    className="close-button"
                     onClick={() => setShowProductModal(false)}
                   >
                     <X size={20} />
                   </button>
                 </div>
                 
-                <div className="product-modal-body">
-                  <div className="product-modal-content">
+                <div className="modal-body">
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3rem' }}>
                     <div>
                       {isPromotionActive && (
                         <motion.div
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           style={{
-                            background: 'var(--color-promotion-light)',
-                            border: '2px solid var(--color-promotion)',
-                            borderRadius: 'var(--radius-lg)',
+                            background: '#FEE2E2',
+                            border: '2px solid #EF4444',
+                            borderRadius: '12px',
                             padding: '1rem',
                             marginBottom: '1rem',
                             display: 'flex',
@@ -2090,12 +1522,12 @@ const FootballJerseysShop = () => {
                             gap: '0.75rem'
                           }}
                         >
-                          <Flame size={20} color="var(--color-promotion)" />
+                          <Flame size={20} color="#EF4444" />
                           <div>
-                            <strong style={{ color: 'var(--color-promotion)' }}>
+                            <strong style={{ color: '#EF4444' }}>
                               PROMOTION EN COURS
                             </strong>
-                            <p style={{ fontSize: '0.875rem', marginTop: '0.25rem', color: 'var(--color-promotion-dark)' }}>
+                            <p style={{ fontSize: '0.875rem', marginTop: '0.25rem', color: '#DC2626' }}>
                               Prix spécial : 150 DH au lieu de 180 DH
                             </p>
                           </div>
@@ -2105,92 +1537,126 @@ const FootballJerseysShop = () => {
                       <img 
                         src={selectedProduct.image} 
                         alt={selectedProduct.country}
-                        className="product-modal-image"
+                        style={{ 
+                          width: '100%',
+                          height: '350px',
+                          objectFit: 'cover',
+                          borderRadius: '20px',
+                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                        }}
                       />
                       <div style={{ marginTop: '1.5rem' }}>
-                        <h3 className="product-modal-title">
+                        <h3 style={{ fontSize: '2rem', fontWeight: '800', color: '#111827' }}>
                           {selectedProduct.country} - {selectedProduct.name}
                         </h3>
-                        <div className="product-modal-price">
+                        <div style={{ fontSize: '2.5rem', fontWeight: '800', color: '#F59E0B', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                           {formatPrice(selectedProduct.priceMAD)}
                           {isPromotionActive && (
-                            <span className="price-after-promotion">180 DH</span>
+                            <span style={{ fontSize: '1.5rem', color: '#6b7280', textDecoration: 'line-through' }}>
+                              180 DH
+                            </span>
                           )}
                         </div>
-                        <div className="product-modal-rating">
-                          <Star size={18} fill="var(--color-accent)" color="var(--color-accent)" />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+                          <Star size={18} fill="#F59E0B" color="#F59E0B" />
                           <span>{selectedProduct.rating} ({selectedProduct.reviewCount} avis)</span>
                           <span style={{ margin: '0 0.5rem' }}>•</span>
                           <Clock size={18} />
                           <span>Livraison: {selectedProduct.shippingTime}</span>
                         </div>
-                        <div style={{ marginTop: '1rem', color: 'var(--color-gray-600)' }}>
-                          <p>{selectedProduct.shortDesc}</p>
-                          <div style={{ marginTop: '1rem' }}>
-                            <h4 style={{ fontWeight: '600', marginBottom: '0.5rem' }}>Caractéristiques:</h4>
-                            <ul style={{ listStyle: 'none', paddingLeft: '0' }}>
-                              {selectedProduct.highlights.map((feature, index) => (
-                                <li key={index} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                  <Check size={16} color="var(--color-success)" />
-                                  <span>{feature}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        </div>
                       </div>
                     </div>
                     
-                    <div className="product-modal-info">
+                    <div>
                       {/* Sélection taille */}
-                      <div className="modal-size-selection">
-                        <div className="modal-size-header">
-                          <h3 style={{ color: 'var(--color-gray-900)' }}>Choisissez votre taille</h3>
-                          <button 
-                            className="modal-size-guide-link"
-                          >
-                            <Ruler size={16} />
-                            Guide des tailles
-                          </button>
+                      <div style={{ marginBottom: '2rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                          <h3 style={{ color: '#111827' }}>Choisissez votre taille</h3>
                         </div>
                         
-                        <div className="modal-sizes-container">
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '1rem' }}>
                           {selectedProduct.availableSizes.map(size => (
-                            <motion.div
+                            <motion.button
                               key={size}
-                              className={`modal-size-option ${selectedSize === size ? "selected" : ""}`}
                               onClick={() => setSelectedSize(size)}
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
+                              style={{ 
+                                padding: '1.25rem 1rem',
+                                background: selectedSize === size ? '#F59E0B' : '#f3f4f6',
+                                border: `2px solid ${selectedSize === size ? '#F59E0B' : '#d1d5db'}`,
+                                borderRadius: '12px',
+                                textAlign: 'center',
+                                cursor: 'pointer',
+                                color: selectedSize === size ? 'white' : '#374151',
+                                fontSize: '1.125rem',
+                                fontWeight: '800'
+                              }}
                             >
-                              <div className="modal-size-text">{size}</div>
-                            </motion.div>
+                              {size}
+                            </motion.button>
                           ))}
                         </div>
                       </div>
 
                       {/* Sélection quantité */}
-                      <div className="modal-quantity-selector">
-                        <h3 style={{ color: 'var(--color-gray-900)', marginBottom: '1rem' }}>Quantité</h3>
-                        <div className="modal-quantity-controls">
+                      <div style={{ marginBottom: '2rem' }}>
+                        <h3 style={{ color: '#111827', marginBottom: '1rem' }}>Quantité</h3>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                           <motion.button 
-                            className="modal-quantity-button"
                             onClick={() => setQuantity(Math.max(1, quantity - 1))}
                             whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.9 }}
+                            style={{ 
+                              width: '48px',
+                              height: '48px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              background: '#f3f4f6',
+                              border: '2px solid #d1d5db',
+                              borderRadius: '12px',
+                              fontSize: '1.5rem',
+                              fontWeight: '700',
+                              cursor: 'pointer'
+                            }}
                           >
                             <Minus size={20} />
                           </motion.button>
-                          <span className="modal-quantity-display">{quantity}</span>
+                          <span style={{ minWidth: '60px', textAlign: 'center', fontSize: '1.5rem', fontWeight: '800', color: '#111827' }}>
+                            {quantity}
+                          </span>
                           <motion.button 
-                            className="modal-quantity-button"
                             onClick={() => setQuantity(Math.min(selectedProduct.inventory, quantity + 1))}
                             whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.9 }}
+                            style={{ 
+                              width: '48px',
+                              height: '48px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              background: '#f3f4f6',
+                              border: '2px solid #d1d5db',
+                              borderRadius: '12px',
+                              fontSize: '1.5rem',
+                              fontWeight: '700',
+                              cursor: 'pointer'
+                            }}
                           >
                             <Plus size={20} />
                           </motion.button>
-                          <div className="modal-stock-info">
+                          <div style={{ 
+                            marginLeft: 'auto',
+                            padding: '0.75rem 1rem',
+                            background: '#f3f4f6',
+                            borderRadius: '12px',
+                            color: '#374151',
+                            fontSize: '0.875rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem'
+                          }}>
                             <Package size={14} />
                             Stock: {selectedProduct.inventory} unités
                           </div>
@@ -2198,44 +1664,65 @@ const FootballJerseysShop = () => {
                       </div>
 
                       {/* Récapitulatif */}
-                      <div className="modal-order-summary">
-                        <h3 style={{ color: 'var(--color-gray-900)', marginBottom: '1rem' }}>
+                      <div style={{ 
+                        background: 'white',
+                        borderRadius: '20px',
+                        padding: '1.5rem',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                        border: '2px solid #e5e7eb'
+                      }}>
+                        <h3 style={{ color: '#111827', marginBottom: '1rem' }}>
                           Récapitulatif de commande
                         </h3>
                         
-                        <div className="modal-summary-line">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem 0', borderBottom: '1px solid #e5e7eb' }}>
                           <span>Prix unitaire:</span>
                           <span>{formatPrice(selectedProduct.priceMAD)}</span>
                         </div>
                         
-                        <div className="modal-summary-line">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem 0', borderBottom: '1px solid #e5e7eb' }}>
                           <span>Sous-total ({quantity} × {selectedProduct.priceMAD} DH):</span>
                           <span>{calculateTotal().formatted.subtotal}</span>
                         </div>
                         
-                        <div className="modal-summary-line">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem 0', borderBottom: '1px solid #e5e7eb' }}>
                           <span>Livraison:</span>
                           <span>{calculateTotal().formatted.delivery}</span>
                         </div>
                         
                         {isPromotionActive && (
-                          <div className="modal-summary-line" style={{ color: 'var(--color-promotion)', fontWeight: '600' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem 0', color: '#EF4444', fontWeight: '600' }}>
                             <span>Économie réalisée:</span>
                             <span>{(NORMAL_PRICE - PROMOTION_PRICE) * quantity} DH</span>
                           </div>
                         )}
                         
-                        <div className="modal-summary-total">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 0', fontSize: '1.25rem', fontWeight: '800', color: '#111827' }}>
                           <span>Total à payer:</span>
                           <span>{calculateTotal().formatted.total}</span>
                         </div>
                         
                         <motion.button 
-                          className={`modal-checkout-button ${isPromotionActive ? 'promo-button' : ''}`}
                           onClick={handleOpenOrderForm}
                           disabled={!selectedSize}
                           whileHover={{ scale: selectedSize ? 1.02 : 1 }}
                           whileTap={{ scale: selectedSize ? 0.98 : 1 }}
+                          style={{ 
+                            width: '100%',
+                            padding: '1rem',
+                            background: selectedSize ? (isPromotionActive ? 'linear-gradient(135deg, #EF4444, #DC2626)' : '#000000') : '#9ca3af',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '12px',
+                            fontSize: '1rem',
+                            fontWeight: '700',
+                            cursor: selectedSize ? 'pointer' : 'not-allowed',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.75rem',
+                            marginTop: '1rem'
+                          }}
                         >
                           <CreditCard size={20} />
                           {selectedSize 
@@ -2261,36 +1748,43 @@ const FootballJerseysShop = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="form-modal-overlay"
+              className="modal-overlay"
             >
               <motion.div
                 initial={{ scale: 0.9, y: 20 }}
                 animate={{ scale: 1, y: 0 }}
                 exit={{ scale: 0.9, y: 20 }}
-                className="form-modal"
+                className="modal-container"
               >
                 {orderConfirmed ? (
-                  <div className="success-view">
-                    <div className="success-icon-wrapper">
+                  <div className="success-container">
+                    <div className="success-icon">
                       <CheckCircle size={40} />
                     </div>
                     <h3 className="success-title">Commande confirmée !</h3>
-                    <p className="success-message">
+                    <p style={{ color: '#4b5563', marginBottom: '2rem', lineHeight: '1.6' }}>
                       Votre commande a été enregistrée avec succès. 
                       <br />
                       Notre équipe vous contactera sous 24h pour confirmer la livraison.
                     </p>
-                    <p style={{ 
-                      color: 'var(--color-gray-500)', 
-                      fontSize: '0.875rem',
-                      marginTop: '1rem'
-                    }}>
-                      Numéro de commande: #{Math.random().toString(36).substr(2, 9).toUpperCase()}
-                    </p>
+                    
+                    <div style={{ marginBottom: '2rem' }}>
+                      <h4 style={{ fontWeight: '600', color: '#374151', marginBottom: '1rem' }}>
+                        Votre numéro de commande :
+                      </h4>
+                      <div className="order-number-display">
+                        {orderNumber}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center', marginTop: '1rem' }}>
+                        <Clock size={16} />
+                        <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Conservez ce numéro pour tout suivi</span>
+                      </div>
+                    </div>
+                    
                     {isPromotionActive && (
                       <motion.p 
                         style={{ 
-                          color: 'var(--color-promotion)', 
+                          color: '#EF4444', 
                           fontWeight: '600',
                           marginTop: '1rem'
                         }}
@@ -2301,14 +1795,23 @@ const FootballJerseysShop = () => {
                         ✅ Vous avez bénéficié de notre promotion spéciale !
                       </motion.p>
                     )}
+                    
+                    <p style={{ 
+                      color: '#6b7280', 
+                      fontSize: '0.875rem',
+                      marginTop: '2rem'
+                    }}>
+                      La fenêtre se fermera automatiquement dans quelques secondes...
+                    </p>
                   </div>
                 ) : (
                   <>
                     <div className="modal-header">
-                      <h2 className="modal-title">Informations de livraison</h2>
+                      <h2 style={{ fontSize: '1.5rem', fontWeight: '800' }}>Informations de livraison</h2>
                       <button 
-                        className="close-modal"
+                        className="close-button"
                         onClick={() => setShowOrderForm(false)}
+                        disabled={isSubmitting}
                       >
                         <X size={20} />
                       </button>
@@ -2318,8 +1821,8 @@ const FootballJerseysShop = () => {
                       {/* Récap commande */}
                       <motion.div 
                         style={{ 
-                          background: 'var(--color-gray-50)',
-                          borderRadius: 'var(--radius-lg)',
+                          background: '#f9fafb',
+                          borderRadius: '12px',
                           padding: '1.5rem',
                           marginBottom: '2rem'
                         }}
@@ -2338,19 +1841,19 @@ const FootballJerseysShop = () => {
                             style={{ 
                               width: '80px', 
                               height: '80px', 
-                              borderRadius: 'var(--radius-lg)',
+                              borderRadius: '12px',
                               objectFit: 'cover'
                             }}
                           />
                           <div>
-                            <h4 style={{ fontWeight: '700', color: 'var(--color-gray-900)' }}>
+                            <h4 style={{ fontWeight: '700', color: '#111827' }}>
                               {selectedProduct?.country} - {selectedProduct?.name}
                             </h4>
-                            <p style={{ color: 'var(--color-gray-600)', fontSize: '0.875rem' }}>
+                            <p style={{ color: '#4b5563', fontSize: '0.875rem' }}>
                               Taille: {selectedSize} • Quantité: {quantity}
                             </p>
                             <p style={{ 
-                              color: 'var(--color-gray-700)', 
+                              color: '#374151', 
                               fontWeight: '700',
                               marginTop: '0.25rem'
                             }}>
@@ -2361,9 +1864,9 @@ const FootballJerseysShop = () => {
                         {isPromotionActive && (
                           <motion.div 
                             style={{ 
-                              background: 'var(--color-promotion-light)',
-                              border: '1px solid var(--color-promotion)',
-                              borderRadius: 'var(--radius)',
+                              background: '#FEE2E2',
+                              border: '1px solid #EF4444',
+                              borderRadius: '8px',
                               padding: '0.75rem',
                               marginBottom: '0.75rem',
                               display: 'flex',
@@ -2373,8 +1876,8 @@ const FootballJerseysShop = () => {
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
                           >
-                            <Tag size={16} color="var(--color-promotion)" />
-                            <span style={{ fontSize: '0.875rem', color: 'var(--color-promotion)' }}>
+                            <Tag size={16} color="#EF4444" />
+                            <span style={{ fontSize: '0.875rem', color: '#EF4444' }}>
                               Promotion appliquée : -30 DH par maillot
                             </span>
                           </motion.div>
@@ -2383,7 +1886,7 @@ const FootballJerseysShop = () => {
                           display: 'flex', 
                           justifyContent: 'space-between',
                           fontWeight: '700',
-                          color: 'var(--color-gray-900)'
+                          color: '#111827'
                         }}>
                           <span>Total:</span>
                           <span>{calculateTotal().formatted.total}</span>
@@ -2401,10 +1904,16 @@ const FootballJerseysShop = () => {
                             name="fullName"
                             value={customerData.fullName}
                             onChange={handleInputChange}
-                            className="form-control"
+                            className={`form-input ${errors.fullName ? 'border-red-500' : ''}`}
                             placeholder="Votre nom et prénom"
                             required
                           />
+                          {errors.fullName && (
+                            <div className="error">
+                              <AlertCircle size={14} />
+                              {errors.fullName}
+                            </div>
+                          )}
                         </div>
                         
                         <div className="form-group">
@@ -2417,10 +1926,16 @@ const FootballJerseysShop = () => {
                             name="phone"
                             value={customerData.phone}
                             onChange={handleInputChange}
-                            className="form-control"
-                            placeholder="06 XX XX XX XX"
+                            className={`form-input ${errors.phone ? 'border-red-500' : ''}`}
+                            placeholder="06 12 34 56 78"
                             required
                           />
+                          {errors.phone && (
+                            <div className="error">
+                              <AlertCircle size={14} />
+                              {errors.phone}
+                            </div>
+                          )}
                         </div>
                         
                         <div className="form-group">
@@ -2433,10 +1948,15 @@ const FootballJerseysShop = () => {
                             name="email"
                             value={customerData.email}
                             onChange={handleInputChange}
-                            className="form-control"
+                            className={`form-input ${errors.email ? 'border-red-500' : ''}`}
                             placeholder="votre@email.com"
-                            required
                           />
+                          {errors.email && (
+                            <div className="error">
+                              <AlertCircle size={14} />
+                              {errors.email}
+                            </div>
+                          )}
                         </div>
                         
                         <div className="form-group">
@@ -2448,7 +1968,7 @@ const FootballJerseysShop = () => {
                             name="city"
                             value={customerData.city}
                             onChange={handleInputChange}
-                            className="form-control"
+                            className={`form-input ${errors.city ? 'border-red-500' : ''}`}
                             required
                           >
                             <option value="">Sélectionnez votre ville</option>
@@ -2458,6 +1978,12 @@ const FootballJerseysShop = () => {
                               </option>
                             ))}
                           </select>
+                          {errors.city && (
+                            <div className="error">
+                              <AlertCircle size={14} />
+                              {errors.city}
+                            </div>
+                          )}
                         </div>
                         
                         <div className="form-group">
@@ -2470,22 +1996,34 @@ const FootballJerseysShop = () => {
                             name="address"
                             value={customerData.address}
                             onChange={handleInputChange}
-                            className="form-control"
+                            className={`form-input ${errors.address ? 'border-red-500' : ''}`}
                             placeholder="Adresse, quartier, bâtiment, étage..."
                             required
                           />
+                          {errors.address && (
+                            <div className="error">
+                              <AlertCircle size={14} />
+                              {errors.address}
+                            </div>
+                          )}
                         </div>
                         
                         <div className="form-group">
                           <label className="form-label">
                             Méthode de paiement
                           </label>
-                          <div className="payment-options">
-                            <motion.label 
-                              className={`payment-choice ${customerData.paymentMethod === "cash" ? "selected" : ""}`}
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
-                            >
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginTop: '1rem' }}>
+                            <label style={{ 
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.75rem',
+                              padding: '1rem',
+                              border: `2px solid ${customerData.paymentMethod === "cash" ? '#F59E0B' : '#d1d5db'}`,
+                              borderRadius: '12px',
+                              cursor: 'pointer',
+                              transition: 'all 0.3s ease',
+                              background: customerData.paymentMethod === "cash" ? 'rgba(245, 158, 11, 0.05)' : 'transparent'
+                            }}>
                               <input
                                 type="radio"
                                 name="paymentMethod"
@@ -2497,17 +2035,23 @@ const FootballJerseysShop = () => {
                               <DollarSign size={20} />
                               <div>
                                 <div style={{ fontWeight: '600' }}>Paiement à la livraison</div>
-                                <div style={{ fontSize: '0.875rem', color: 'var(--color-gray-600)' }}>
+                                <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
                                   Espèces
                                 </div>
                               </div>
-                            </motion.label>
+                            </label>
                             
-                            <motion.label 
-                              className={`payment-choice ${customerData.paymentMethod === "transfer" ? "selected" : ""}`}
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
-                            >
+                            <label style={{ 
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.75rem',
+                              padding: '1rem',
+                              border: `2px solid ${customerData.paymentMethod === "transfer" ? '#F59E0B' : '#d1d5db'}`,
+                              borderRadius: '12px',
+                              cursor: 'pointer',
+                              transition: 'all 0.3s ease',
+                              background: customerData.paymentMethod === "transfer" ? 'rgba(245, 158, 11, 0.05)' : 'transparent'
+                            }}>
                               <input
                                 type="radio"
                                 name="paymentMethod"
@@ -2519,11 +2063,11 @@ const FootballJerseysShop = () => {
                               <CreditCard size={20} />
                               <div>
                                 <div style={{ fontWeight: '600' }}>Virement bancaire</div>
-                                <div style={{ fontSize: '0.875rem', color: 'var(--color-gray-600)' }}>
+                                <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
                                   CIH, Attijariwafa
                                 </div>
                               </div>
-                            </motion.label>
+                            </label>
                           </div>
                         </div>
                         
@@ -2536,30 +2080,29 @@ const FootballJerseysShop = () => {
                             name="notes"
                             value={customerData.notes}
                             onChange={handleInputChange}
-                            className="form-control form-textarea"
+                            className="form-input"
                             placeholder="Informations supplémentaires pour la livraison, préférences horaires..."
+                            style={{ minHeight: '100px', resize: 'vertical' }}
                           />
                         </div>
                         
-                        <motion.button 
+                        <button 
                           type="submit" 
-                          className={`submit-order ${isPromotionActive ? 'promo-submit' : ''}`}
-                          disabled={isProcessing}
-                          whileHover={{ scale: isProcessing ? 1 : 1.02 }}
-                          whileTap={{ scale: isProcessing ? 1 : 0.98 }}
+                          className="submit-button"
+                          disabled={isSubmitting}
                         >
-                          {isProcessing ? (
+                          {isSubmitting ? (
                             <>
-                              <div className="loading-spinner"></div>
-                              Traitement en cours...
+                              <div className="loader" />
+                              Envoi en cours...
                             </>
                           ) : (
                             <>
                               <Check size={20} />
-                              {isPromotionActive ? "Profiter de l'offre" : "Confirmer la commande"}
+                              Confirmer la commande
                             </>
                           )}
-                        </motion.button>
+                        </button>
                       </form>
                     </div>
                   </>
@@ -2576,7 +2119,7 @@ const FootballJerseysShop = () => {
               initial={{ opacity: 0, x: -100 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -100 }}
-              className="mobile-menu-overlay"
+              className="mobile-menu"
             >
               <div className="mobile-menu-header">
                 <div className="brand-logo">
@@ -2588,8 +2131,8 @@ const FootballJerseysShop = () => {
                   </div>
                 </div>
                 <button 
-                  className="close-modal"
-                  style={{ background: 'var(--color-gray-100)', color: 'var(--color-gray-900)' }}
+                  className="close-button"
+                  style={{ background: '#f3f4f6', color: '#111827' }}
                   onClick={() => setShowMobileNav(false)}
                 >
                   <X size={20} />
@@ -2597,32 +2140,39 @@ const FootballJerseysShop = () => {
               </div>
               
               <div className="mobile-nav">
-                <a href="#" className="mobile-nav-link">
+                <button style={{ 
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '1rem',
+                  padding: '1rem',
+                  background: '#f3f4f6',
+                  border: 'none',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  color: '#111827',
+                  fontWeight: '600'
+                }}>
                   <Home size={20} />
                   Accueil
-                </a>
-                
-                <a href="#maillots" className="mobile-nav-link">
-                  <ShoppingBag size={20} />
-                  Collection
-                </a>
+                </button>
                 
                 {isPromotionActive && (
-                  <a href="#" className="mobile-nav-link promo-link">
+                  <button style={{ 
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    padding: '1rem',
+                    background: '#FEE2E2',
+                    border: '2px solid #EF4444',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    color: '#EF4444',
+                    fontWeight: '600'
+                  }}>
                     <Flame size={20} />
                     Promotion 150 DH
-                  </a>
+                  </button>
                 )}
-                
-                <a href="#" className="mobile-nav-link">
-                  <Heart size={20} />
-                  Favoris ({favoriteItems.length})
-                </a>
-                
-                <a href="#" className="mobile-nav-link">
-                  <ShoppingCart size={20} />
-                  Panier ({cartItems.length})
-                </a>
               </div>
             </motion.div>
           )}
